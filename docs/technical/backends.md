@@ -42,6 +42,22 @@ still applies independently at each position. Callbacks without this method
 continue to score one node at a time. `model_calls` retains its historical meaning
 of scored trie nodes, not physical forward passes.
 
+A backend may also expose `batch_next_logprobs(requests)` for request-level
+answer-code batching. Each item is `(prompt_ids, allowed_token_ids)` and the
+result must contain one full-vocabulary-normalized token mapping per item in the
+same order. `classify_many` uses this only when a request has multiple questions
+in `answer_codes` mode and all selected paths contain one token. Requests with
+multi-token codes, other modes, and other backends retain sequential behavior.
+
+The Hugging Face GPU implementation finds the exact common token prefix, leaves
+at least one suffix token per question, prefills the prefix once, and deep-copies
+and broadcasts its reorderable cache into suffix batches. Right padding is masked
+and each row's actual final position supplies its logits. Batches are limited to
+32 rows and 32,768 padded suffix tokens. CPU disables question batching because
+small matrix batches can cost more than serial evaluation. Input usage retains
+the public sum-of-question-prompts definition rather than reporting reduced
+physical computation.
+
 The shared [CachedScorer](../../open_cricket/local.py) works as follows:
 
 1. Validate the requested prompt-plus-prefix against the context limit.

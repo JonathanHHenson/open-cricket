@@ -145,6 +145,52 @@ except ImportError:
 
 @unittest.skipIf(torch is None, 'optional HF dependencies not installed')
 class HuggingFaceCacheTests(unittest.TestCase):
+    def test_question_batch_matches_independent_full_forwards(self):
+        from open_cricket.hf import HuggingFaceBackend
+        torch.manual_seed(42)
+        backend = HuggingFaceBackend.__new__(HuggingFaceBackend)
+        backend.torch, backend.device, backend.limit = torch, 'cpu', 128
+        backend.model = Qwen2ForCausalLM(Qwen2Config(
+            vocab_size=32, hidden_size=32, intermediate_size=64,
+            num_hidden_layers=2, num_attention_heads=4, num_key_value_heads=2,
+            max_position_embeddings=128)).eval()
+        backend._batch_questions = True
+        backend._max_batch_size, backend._max_batch_tokens = 2, 128
+        requests = [
+            ([7, 8, 6], (9, 10)),
+            ([7, 8, 5, 4], (9, 11, 12)),
+            ([7, 8, 3, 2, 1], (10, 12)),
+            ([7, 8, 6, 4], (8, 13)),
+        ]
+        for last_logits in (True, False):
+            backend._last_logits = last_logits
+            expected = [backend.next_logprobs(prompt, (), allowed)
+                        for prompt, allowed in requests]
+            actual = backend.batch_next_logprobs(requests)
+            for row, reference in zip(actual, expected):
+                self.assertEqual(set(row), set(reference))
+                for token in reference:
+                    self.assertAlmostEqual(row[token], reference[token], places=5)
+
+    def test_disabled_question_batch_uses_independent_forwards(self):
+        from open_cricket.hf import HuggingFaceBackend
+        backend = HuggingFaceBackend.__new__(HuggingFaceBackend)
+        backend._batch_questions = False
+        backend.next_logprobs = lambda prompt, prefix, allowed: {
+            token: -float(token) for token in allowed
+        }
+        self.assertEqual(
+            backend.batch_next_logprobs([([1], (2, 3)), ([4], (5,))]),
+            [{2: -2.0, 3: -3.0}, {5: -5.0}],
+        )
+        backend._batch_questions = True
+        backend._max_batch_tokens = 1
+        backend.limit = 128
+        self.assertEqual(
+            backend.batch_next_logprobs([([1, 2, 3], (4,)), ([1, 4, 5], (5,))]),
+            [{4: -4.0}, {5: -5.0}],
+        )
+
     def test_real_transformer_cache_and_final_logits_match_full_forward(self):
         from open_cricket.hf import HuggingFaceBackend
         torch.manual_seed(42)

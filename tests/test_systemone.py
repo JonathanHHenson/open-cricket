@@ -215,7 +215,7 @@ class SystemOneTests(unittest.TestCase):
         self.assertEqual(self.classifier.calls, [initial])
 
     def test_documented_limits(self):
-        for count, status in [(255, 200), (256, 422)]:
+        for count, status in [(0, 422), (255, 200), (256, 200), (1024, 200)]:
             body = {'model': 'local-checkpoint', 'state': '', 'questions': {
                 'q': {'type': 'choice', 'criteria': {str(i): None for i in range(count)}}}}
             self.assertEqual(self.post(body).status_code, status)

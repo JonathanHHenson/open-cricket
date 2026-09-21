@@ -116,8 +116,11 @@ Nested JSON values are preserved; structured content is serialized into the loca
 model's prompt. Questions are identified by their original map keys; these keys
 are not included in model prompts. Instructions may be omitted or null, matching
 the official SDK's schema. Empty instructions use a generic question for the type.
-The wire schema accepts 1–255 nonblank Choice labels. Default `answer_codes`
-scoring supports up to 26; configure `sequence` for larger sets or full label
+The local wire schema accepts nonempty sets of nonblank Choice labels without a
+fixed count cap, extending the official SDK's 255-label limit. Larger requests
+should use Open Cricket's client or HTTP API. Default `answer_codes` scoring
+prefers single-token codes and extends to longer codes as needed, subject to
+model context and memory limits; configure `sequence` for full label
 likelihoods. Score accepts 1–10 levels, including the
 single-level case allowed by SDK 0.7.0 (descriptive rubrics normally need two or more).
 Malformed requests return 422 with field details. Missing or incorrect configured

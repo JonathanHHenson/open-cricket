@@ -51,15 +51,18 @@ Only `model` may be positional. An injected backend does not infer the model
 name; set it yourself. Read [scoring semantics](technical/scoring.md) before
 changing mode or temperature.
 
-For one model pass per question, use `LocalClient(mode="answer_codes")` (or pass
-the same mode to `as_runnable` / `classify`). Categories receive A–Z in criterion
-order; the tokenizer must encode each code as exactly one token. Up to 26 options
-are supported; unsupported tokenization or larger sets raise an error. Responses
+For compact answer codes, use `LocalClient(mode="answer_codes")` (or pass
+the same mode to `as_runnable` / `classify`). Categories receive `A–Z`, `a–z`,
+then `0–9` in criterion order. Codes are case-sensitive and must each encode as
+distinct token sequences. Single-token alphanumerics take priority; when exhausted,
+remaining valid characters and longer codes (`AA`, `AB`, …) are used without a
+fixed candidate cap. Context and memory limits still apply. Responses
 retain original labels, including Score levels and Noul's true/false meanings.
-Only the first code token is scored, without EOS, so probabilities and predictions
+Single-token sets score without EOS in one pass. If any code needs multiple tokens,
+all codes are scored with EOS using the cached trie. Probabilities and predictions
 can differ from label scoring. Evaluate your own data and candidate orders before
 switching modes. The default is `answer_codes`; use `mode="sequence"` for full
-label scoring or more than 26 options.
+label scoring. Multi-token codes require additional work and introduce length bias.
 
 ### JSON requests and async calls
 

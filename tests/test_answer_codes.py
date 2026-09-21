@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from open_cricket import LocalClient
 from open_cricket.cli import main
 from open_cricket.integrations import as_runnable
-from open_cricket.questionnaire import classify
+from open_cricket.questionnaire import _answer_codes, classify
 from open_cricket.server import create_app
 
 
@@ -35,7 +35,47 @@ class CodeBackend:
         return {token: math.log({65: .2, 66: .6}.get(token, .001)) for token in allowed}
 
 
+class BatchCodeBackend(CodeBackend):
+    def __init__(self):
+        super().__init__()
+        self.batches = []
+
+    def batch_next_logprobs(self, requests):
+        self.batches.append(requests)
+        return [
+            {token: math.log({65: .2, 66: .6}.get(token, .001)) for token in allowed}
+            for _, allowed in requests
+        ]
+
+    def next_logprobs(self, prompt, prefix, allowed):
+        raise AssertionError('Multiple questions should use the batch scorer')
+
+
 class AnswerCodeTests(unittest.TestCase):
+    def test_client_batches_multiple_questions_and_preserves_question_order(self):
+        backend = BatchCodeBackend()
+        result = LocalClient(backend=backend).system_one('message', {
+            'first': {'type': 'choice', 'criteria': {'a': None, 'b': None}},
+            'second': {'type': 'choice', 'criteria': {'x': None, 'y': None}},
+            'third': {'type': 'noul'},
+        })
+        self.assertEqual(list(result['answers']), ['first', 'second', 'third'])
+        self.assertEqual([answer.get('choice') for answer in result['answers'].values()][:2],
+                         ['b', 'y'])
+        self.assertEqual(len(backend.batches), 1)
+        self.assertEqual(len(backend.batches[0]), 3)
+        self.assertTrue(all(allowed == (65, 66) for _, allowed in backend.batches[0]))
+        self.assertEqual(result['usage'], {'input_tokens': 6, 'output_tokens': 0})
+
+    def test_bad_batch_cardinality_is_rejected(self):
+        backend = BatchCodeBackend()
+        backend.batch_next_logprobs = lambda requests: requests[:1]
+        with self.assertRaisesRegex(ValueError, 'every question'):
+            LocalClient(backend=backend).system_one('message', {
+                'one': {'type': 'choice', 'criteria': {'a': None, 'b': None}},
+                'two': {'type': 'choice', 'criteria': {'a': None, 'b': None}},
+            })
+
     def test_scores_one_distribution_preserves_labels_and_excludes_eos(self):
         backend = CodeBackend()
         options = [{'label': 'billing "refund"', 'description': 'Payments'}, '技術支援']
@@ -60,15 +100,13 @@ class AnswerCodeTests(unittest.TestCase):
 
     def test_tokenization_limits_and_bad_probabilities_fail_before_scoring(self):
         backend = CodeBackend()
-        for paths in ([1, 2, 0], [0, 0], [1], []):
+        for paths in ([0, 0], [1], []):
             with patch.object(backend, 'answer_ids', return_value=paths):
-                with self.assertRaisesRegex(ValueError, 'one token'):
+                with self.assertRaisesRegex(ValueError, 'terminator'):
                     classify(backend, 'x', 'q', ['a'], mode='answer_codes')
         with patch.object(backend, 'answer_ids', return_value=[1, 0]):
-            with self.assertRaisesRegex(ValueError, 'Duplicate'):
+            with self.assertRaisesRegex(ValueError, 'duplicate answer codes'):
                 classify(backend, 'x', 'q', ['a', 'b'], mode='answer_codes')
-        with self.assertRaisesRegex(ValueError, '26 options'):
-            classify(backend, 'x', 'q', [str(i) for i in range(27)], mode='answer_codes')
         for temperature in (0, -1, float('nan')):
             with self.assertRaises(ValueError):
                 classify(backend, 'x', 'q', ['a'], mode='answer_codes', temperature=temperature)
@@ -78,13 +116,93 @@ class AnswerCodeTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'valid log probabilities'):
                     classify(backend, 'x', 'q', ['a'], mode='answer_codes')
 
-    def test_all_26_codes_and_single_option(self):
+    def test_all_62_codes_and_single_option(self):
         backend = CodeBackend()
-        result = classify(backend, 'x', 'q', [str(i) for i in range(26)], mode='answer_codes')
-        self.assertEqual(len(result['options']), 26)
+        result = classify(backend, 'x', 'q', [str(i) for i in range(62)], mode='answer_codes')
+        self.assertEqual(len(result['options']), 62)
         self.assertEqual(result['model_calls'], 1)
+        by_label = {row['label']: row['code'] for row in result['options']}
+        self.assertEqual(by_label['0'], 'A')
+        self.assertEqual(by_label['25'], 'Z')
+        self.assertEqual(by_label['26'], 'a')
+        self.assertEqual(by_label['51'], 'z')
+        self.assertEqual(by_label['52'], '0')
+        self.assertEqual(by_label['61'], '9')
         result = classify(backend, 'x', 'q', ['only'], mode='answer_codes')
         self.assertEqual(result['options'][0]['probability'], 1)
+
+    def test_unsupported_and_colliding_codes_are_skipped(self):
+        backend = CodeBackend()
+
+        def selective_ids(code):
+            if code == 'A':
+                raise ValueError('unsupported')
+            if code == 'B':
+                return [67, 0]
+            return [ord(code), 0]
+
+        with patch.object(backend, 'answer_ids', side_effect=selective_ids):
+            result = classify(backend, 'x', 'q', ['first', 'second'], mode='answer_codes')
+
+        by_label = {row['label']: row['code'] for row in result['options']}
+        self.assertEqual(by_label, {'first': 'B', 'second': 'D'})
+        self.assertIn('B. "first"', result['form'])
+        self.assertIn('D. "second"', result['form'])
+        self.assertNotIn('A. "first"', result['form'])
+
+    def test_long_codes_score_complete_paths_and_use_cache(self):
+        backend = CodeBackend()
+        with patch.object(backend, 'scorer', return_value=lambda prefix, allowed: {
+            token: math.log(.5 if token == 0 else .1) for token in allowed
+        }) as scorer:
+            result = classify(backend, 'x', 'q', [str(i) for i in range(256)])
+        scorer.assert_called_once()
+        self.assertFalse(backend.calls)
+        rows = {row['code']: row for row in result['options']}
+        self.assertEqual(len(rows), 256)
+        self.assertEqual(rows['A']['token_ids'], [65, 0])
+        self.assertEqual(rows['AA']['token_ids'], [65, 65, 0])
+        self.assertAlmostEqual(rows['A']['log_likelihood'], math.log(.1 * .5))
+        self.assertAlmostEqual(rows['AA']['log_likelihood'], math.log(.1 * .1 * .5))
+        self.assertAlmostEqual(sum(row['probability'] for row in rows.values()), 1)
+
+    def test_codes_extend_past_two_characters(self):
+        codes = _answer_codes(CodeBackend(), 62 + 62 ** 2 + 1)
+        self.assertEqual(codes[-2], ('99', (57, 57, 0)))
+        self.assertEqual(codes[-1], ('AAA', (65, 65, 65, 0)))
+
+    def test_multitoken_codes_support_original_backend_protocol(self):
+        backend = CodeBackend()
+        backend.scorer = None
+        result = classify(backend, 'x', 'q', [str(i) for i in range(63)])
+        self.assertEqual(len(result['options']), 63)
+        self.assertTrue(any(prefix == (65, 65) for _, prefix, _ in backend.calls))
+
+    def test_single_tokens_precede_multitoken_characters(self):
+        backend = CodeBackend()
+        original = backend.answer_ids
+        with patch.object(backend, 'answer_ids', side_effect=lambda code:
+                          [123, 124, 0] if code == 'A' else original(code)):
+            small = classify(backend, 'x', 'q', ['first'])
+            self.assertEqual(small['options'][0]['code'], 'B')
+            with patch.object(backend, 'scorer', return_value=lambda prefix, allowed:
+                              {token: math.log(.1) for token in allowed}):
+                large = classify(backend, 'x', 'q', [str(i) for i in range(62)])
+        rows = {row['label']: row for row in large['options']}
+        self.assertEqual(rows['61']['code'], 'A')
+        self.assertEqual(rows['61']['token_ids'], [123, 124, 0])
+
+    def test_mixed_question_lengths_do_not_use_root_only_batching(self):
+        backend = BatchCodeBackend()
+        with patch.object(backend, 'scorer', return_value=lambda prefix, allowed:
+                          {token: math.log(.1) for token in allowed}), \
+             patch.object(backend, 'next_logprobs', return_value={65: math.log(.1)}):
+            result = LocalClient(backend=backend).system_one('x', {
+                'small': {'type': 'choice', 'criteria': {'only': None}},
+                'large': {'type': 'choice', 'criteria': {str(i): None for i in range(256)}},
+            })
+        self.assertFalse(backend.batches)
+        self.assertEqual(len(result['answers']['large']['probabilities']), 256)
 
     def test_typed_answers_restore_choice_score_and_noul_meanings(self):
         result = LocalClient(backend=CodeBackend(), mode='answer_codes').system_one(

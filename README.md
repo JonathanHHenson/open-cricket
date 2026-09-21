@@ -225,7 +225,7 @@ Caches are isolated per classification and are not retained across requests.
 
 ### One-pass answer-code scoring
 
-The default `answer_codes` mode scores A–Z in one model pass per question,
+The default `answer_codes` mode prefers single-token `A–Z`, `a–z`, then `0–9` codes,
 then maps the probabilities back to the original labels:
 
 ```bash
@@ -239,14 +239,16 @@ client = LocalClient(runtime="mlx")
 The server, `classify`, and `as_runnable` also default to `answer_codes`;
 request/response bodies stay unchanged. An explicit `OPEN_CRICKET_MODE` overrides
 the server default.
-It supports Choice, Score, and Noul with at most 26 options per question. Codes
-must each encode as one distinct token; unsupported tokenization and larger
-candidate sets fail explicitly.
+It supports Choice, Score, and Noul. After single-token alphanumerics run out,
+it uses remaining valid characters and longer codes (`AA`, `AB`, …). There is
+no fixed Choice candidate cap; model context and memory remain practical limits.
 
-This mode scores only the first answer-code token, without quotes or EOS. It
+When all codes are single tokens, one forward scores them without EOS. Otherwise,
+the cached trie scores complete codes including EOS, distinguishing `A` from `AA`. It
 changes the scored events, so code/order bias can change predictions and
 probabilities. Use `mode="sequence"`, CLI `--mode sequence`, or server
-`OPEN_CRICKET_MODE=sequence` for full label scoring or more than 26 options.
+`OPEN_CRICKET_MODE=sequence` for full label scoring. Longer codes need additional
+model work and introduce code-length bias.
 
 Compare speed and predictions, including reversed candidate order, with:
 
@@ -270,6 +272,18 @@ for these labels. Reversing option order changed zero code winners and two label
 winners. These same synthetic cases informed prompt development, so the results
 are not independent evidence of accuracy. Individual candidate probabilities
 differed by as much as 0.84; confidence thresholds need separate evaluation.
+
+When one request contains multiple questions, the Hugging Face GPU backend
+reuses the exact shared state prefix and batches the remaining question suffixes.
+The default 1.5B model on MPS measured 225 ms → 129 ms for four questions (1.74×)
+and 924 ms → 336 ms for sixteen (2.75×), using seven warmed repeats. Maximum
+probability differences from independent forwards were 0 and 0.00000026,
+respectively. Single-question requests keep the direct path. CPU, MLX, custom
+backends, and full-label scoring continue to evaluate questions sequentially.
+
+```bash
+uv run python examples/benchmark_questions.py --device mps
+```
 
 ### Measured performance
 

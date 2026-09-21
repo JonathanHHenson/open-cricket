@@ -24,7 +24,7 @@ class QuestionBase(WireModel):
 
 class Choice(QuestionBase):
     type: Literal["choice"] = "choice"
-    criteria: dict[str, Content | None] = Field(min_length=1, max_length=255)
+    criteria: dict[str, Content | None] = Field(min_length=1)
 
     @field_validator("criteria")
     @classmethod

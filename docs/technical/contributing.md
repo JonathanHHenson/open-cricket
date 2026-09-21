@@ -32,6 +32,7 @@ restricted execution environments.
 | Module | Behavior protected |
 | --- | --- |
 | [test_core.py](../../tests/test_core.py) | Scoring mathematics, temperature, underflow, paths, rendering |
+| [test_answer_codes.py](../../tests/test_answer_codes.py) | Code tokenization, question batching, typed results, public entry points |
 | [test_local.py](../../tests/test_local.py) | Cache rollback/isolation/fallback, limits, miniature HF/MLX models |
 | [test_sdk.py](../../tests/test_sdk.py) | Shared example contract, typed calls, invalid input, CLI model override |
 | [test_client.py](../../tests/test_client.py) | HTTP requests and validation before network access |
@@ -76,6 +77,7 @@ After installing the relevant runtime:
 ```bash
 uv run python examples/benchmark_backend.py --device cpu --repeats 5
 uv run python examples/benchmark_backend.py --backend mlx --repeats 5
+uv run python examples/benchmark_questions.py --device mps --repeats 7
 ```
 
 The benchmark defaults to Qwen2.5-0.5B-Instruct, unlike the application's 1.5B

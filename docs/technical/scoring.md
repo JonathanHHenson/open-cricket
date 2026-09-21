@@ -56,13 +56,16 @@ Run `uv run open-cricket --demo --pretty`, then add `--mode constrained`.
 
 ## Local answer-code mode
 
-`classify(..., mode="answer_codes")` maps categories to A–Z in input order and
-renders each code together with its original label and description. Each code
-must tokenize as one unique token (using `answer_ids(code)` and removing the
-protocol's single terminal token). Unsupported tokenization and more than 26
-options raise an error; there is no silent fallback or truncated candidate set.
+`classify(..., mode="answer_codes")` maps categories in input order to `A–Z`,
+`a–z`, then `0–9`, rendering each code with its original label and description.
+Codes are case-sensitive. Single-token alphanumerics take priority, followed by
+valid multi-token characters and longer codes (`AA`, `AB`, …, `AAA`, …).
+There is no fixed candidate cap. Invalid or colliding single-character codes are
+skipped; incompatible generated codes fail explicitly. Context and memory limits
+still apply.
 
-One uncached model forward supplies full-vocabulary-normalized probabilities for
+When all selected codes are single tokens, one uncached model forward supplies
+full-vocabulary-normalized probabilities for
 all code tokens. Only those first-token events are scored:
 
 ```text
@@ -78,11 +81,19 @@ Low-level results expose `mode="answer_codes"`, one scored node, and each row's
 `code`, single token ID, and trace. Candidate mass is the total first-code-token
 mass, so it is not comparable to label mode's completed-answer mass.
 
+When any selected code needs multiple tokens, every code includes the backend's
+terminal token in its scored path. This distinguishes overlapping codes such as
+`A` and `AA`. The cached trie scores joint code-plus-EOS likelihoods, normalizes
+them over candidates, and restores original labels. Longer codes need more model
+work and can receive lower scores from length bias; adding candidates can also
+switch the scoring semantics of existing codes. Question batching applies only
+when every code in the request is single-token.
+
 `examples/benchmark_answer_codes.py` compares speed, predictions, probabilities,
 and reversed candidate order on a small synthetic smoke dataset. It does not
 establish general classification accuracy. Default classification uses
-`answer_codes`. Select `sequence` explicitly for completed label likelihoods or
-more than 26 options. The low-level `score_paths` function and synthetic CLI demo
+`answer_codes`. Select `sequence` explicitly for completed label likelihoods.
+The low-level `score_paths` function and synthetic CLI demo
 retain sequence scoring because they operate on explicit token paths.
 
 ## Traversal and diagnostics
@@ -127,5 +138,6 @@ confidence = clamp(1 - H(p) / log(K), 0, 1)
 ```
 
 For `K = 1`, confidence is 1. Concentration is not calibrated correctness.
-Local and provider answer-code scoring evaluates first-token codes, introduces code/order
-bias, and does not score the same events as local canonical answer sequences.
+Answer-code scoring introduces code/order bias and scores different events from
+canonical label sequences. Provider scoring and local single-token sets score
+first tokens; local multi-token sets score completed codes including EOS.

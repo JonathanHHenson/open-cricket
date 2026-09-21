@@ -17,10 +17,11 @@ Model listing dates describe the adapter, not the checkpoint release.
 
 ## Request body
 
-Default local scoring uses single-token answer codes and supports up to 26
-options per question. For larger Choice sets or full label likelihoods, configure
+Default local scoring prefers single-token answer codes and extends to longer
+codes as needed, with no fixed Choice candidate cap. Model context and memory
+limits still apply. For full label likelihoods, configure
 `OPEN_CRICKET_MODE=sequence` on the server (or `LocalClient(mode="sequence")`).
-The wire schema still permits up to 255 Choice labels.
+The local wire schema has no maximum Choice label count.
 
 All three top-level fields are required:
 
@@ -42,7 +43,7 @@ nonfinite numeric values are rejected.
 
 ### Choice
 
-`"type":"choice"` requires a `criteria` map of 1–255 nonblank labels. Descriptions
+`"type":"choice"` requires a nonempty `criteria` map of nonblank labels. Descriptions
 accept strings, objects, arrays, or null. They guide the model; the returned
 choice is a label. Empty string descriptions are treated as absent.
 

@@ -2,7 +2,7 @@
 import asyncio
 import threading
 
-from .questionnaire import classify
+from .questionnaire import classify_many
 from .systemone import SystemOneRequest, classification_input, format_response
 
 
@@ -22,9 +22,11 @@ class LocalClient:
         if request.model != self.model:
             raise ValueError(f"Unknown model; this client serves {self.model}")
         with self._lock:
-            results = [classify(self.backend, **classification_input(request.state, question),
-                               mode=self.mode, temperature=self.temperature)
-                       for question in request.questions.values()]
+            values = [classification_input(request.state, question)
+                      for question in request.questions.values()]
+            results = classify_many(
+                self.backend, values, mode=self.mode, temperature=self.temperature
+            )
         return format_response(request, self.model, results).model_dump(mode="json")
 
     def system_one(self, state, questions, *, model=None):

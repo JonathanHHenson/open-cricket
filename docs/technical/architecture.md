@@ -24,13 +24,17 @@ imported at use sites. Preserve that separation in public exports and extensions
 ## Local request lifecycle
 
 1. Validate `SystemOneRequest` and check the requested model against the client.
-2. Acquire the per-client lock and evaluate questions in insertion order.
+2. Acquire the per-client lock and prepare questions in insertion order.
 3. `classification_input` renders structured content and maps Choice to its
    labels, Score to numeric-string indices, and Noul to `true`/`false`.
-4. `classify` defaults to mapping labels to single-token A–Z codes in the prompt.
+4. `classify` maps labels to case-sensitive alphanumeric codes, preferring
+   single-token characters (`A–Z`, `a–z`, then `0–9`) before longer codes.
    Explicit `sequence` / `constrained` modes instead tokenize JSON-quoted labels
    followed by EOS.
-5. Code mode calls `next_logprobs` once for all codes. Label modes use
+5. For multiple questions whose codes are all single-token, a capable backend shares their exact token
+   prefix and batches suffix scoring while returning results in request order.
+   Otherwise single-token code mode calls `next_logprobs` once per question.
+   Multi-token code sets include EOS in every path. They and label modes use
    `backend.scorer(prompt)` when available, otherwise call `next_logprobs`
    with the prompt, prefix, and allowed tokens for each trie node.
 6. `score_paths` explores every path and returns detailed scoring rows.
