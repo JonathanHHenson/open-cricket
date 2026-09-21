@@ -64,6 +64,7 @@ all codes are scored with EOS using the cached trie. Probabilities and predictio
 can differ from label scoring. Evaluate your own data and candidate orders before
 switching modes. The default is `answer_codes`; use `mode="sequence"` for full
 label scoring. Multi-token codes require additional work and introduce length bias.
+Noul uses normal positional answer codes with default descriptions `Yes` and `No`.
 
 ### JSON requests and async calls
 

@@ -80,6 +80,12 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(described["answers"]["route"]["choice"], "billing")
         self.assertIn("Charges, payments, and refunds", model.messages[1].content)
         self.assertEqual(asyncio.run(classifier.ainvoke(VALUE))["answers"]["route"]["choice"], "billing")
+        noul = {**VALUE, "questions": {"refund": {
+            "type": "noul", "instructions": "Was a refund requested?"
+        }}}
+        self.assertAlmostEqual(classifier.invoke(noul)["answers"]["refund"]["noul"], 2 / 3)
+        self.assertIn('A = "true"', model.messages[1].content)
+        self.assertIn('B = "false"', model.messages[1].content)
 
     def test_missing_top_k_is_not_zero(self):
         with self.assertRaises(ProbabilityUnavailableError):

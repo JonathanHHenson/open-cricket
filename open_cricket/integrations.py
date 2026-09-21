@@ -55,9 +55,10 @@ def chat_runnable(
         form = build_form(value["message"], value["question"], options)
         if len(categories) > min(26, top_logprobs):
             raise ValueError("Too many options for answer codes/top_logprobs; use exact backend")
+        codes = [chr(65 + i) for i in range(len(categories))]
         mapping = "\n".join(
-            f"{chr(65 + i)} = {json.dumps(label, ensure_ascii=False)}"
-            for i, (label, _) in enumerate(categories)
+            f"{code} = {json.dumps(label, ensure_ascii=False)}"
+            for code, (label, _) in zip(codes, categories)
         )
         return [
             SystemMessage(

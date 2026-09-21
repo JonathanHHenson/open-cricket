@@ -6,8 +6,9 @@ and Noul returns the relative probability of a yes/true answer.
 
 ## User guides
 
-Read the [v0.3.0 release notes](releases/v0.3.0.md) for expanded answer codes,
-multi-question performance changes, and upgrade guidance.
+Read the [v0.3.1 release notes](releases/v0.3.1.md) for clearer Noul prompts and
+the expanded CLI examples. The [v0.3.0 notes](releases/v0.3.0.md) cover expanded
+answer codes and multi-question performance.
 
 | Guide | Use it to |
 | --- | --- |

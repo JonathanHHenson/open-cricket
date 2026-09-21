@@ -1,0 +1,52 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "state": "Our audit team needs a copy of the data-processing agreement and confirmation of where customer backups are stored.",
+  "questions": {
+    "topic": {
+      "type": "choice",
+      "instructions": "Which single topic best routes this request?",
+      "criteria": {
+        "account access": null,
+        "accessibility": null,
+        "advertising": null,
+        "analytics": null,
+        "api": null,
+        "billing": null,
+        "compliance": "Audits, certifications, and contractual controls",
+        "data export": null,
+        "data import": null,
+        "developer tools": null,
+        "documentation": null,
+        "email": null,
+        "fraud": null,
+        "integrations": null,
+        "legal": "Contracts and legal documents",
+        "localization": null,
+        "mobile": null,
+        "notifications": null,
+        "onboarding": null,
+        "orders": null,
+        "partnerships": null,
+        "performance": null,
+        "privacy": "Personal data handling, storage, and processing agreements",
+        "refunds": null,
+        "reporting": null,
+        "sales": null,
+        "security": "Technical security controls and vulnerabilities",
+        "shipping": null,
+        "subscriptions": null,
+        "support": null,
+        "taxes": null,
+        "team management": null,
+        "training": null,
+        "usage limits": null,
+        "video": null,
+        "webhooks": null,
+        "website": null,
+        "workflow automation": null,
+        "data residency": "Geographic location of primary and backup data",
+        "other": null
+      }
+    }
+  }
+}

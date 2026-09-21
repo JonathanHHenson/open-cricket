@@ -30,7 +30,14 @@ class Tokens:
 
 class SdkTests(unittest.TestCase):
     def test_examples_share_cli_local_and_http_contract(self):
-        for filename in ('support.json',):
+        for filename in (
+            'support.json',
+            'product-review.json',
+            'incident-triage.json',
+            'multilingual-support.json',
+            'structured-order.json',
+            'many-candidates.json',
+        ):
             with self.subTest(filename=filename):
                 path = ROOT / 'examples' / filename
                 payload = json.loads(path.read_text())

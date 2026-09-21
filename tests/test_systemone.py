@@ -129,6 +129,11 @@ class SystemOneTests(unittest.TestCase):
         self.assertEqual(answers['b']['score'], 0.0)
         self.assertEqual(answers['c']['noul'], 1/3)
         self.assertEqual(answers['c'], answers['d'])
+        default_noul = self.classifier.calls[2]
+        self.assertEqual(default_noul['options'], [
+            {'label': 'true', 'description': 'Yes'},
+            {'label': 'false', 'description': 'No'},
+        ])
 
     def test_normalized_entropy_boundaries(self):
         from open_cricket.systemone import confidence

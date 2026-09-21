@@ -134,10 +134,10 @@ def classification_input(state, question):
     else:
         criteria = question.criteria or NoulCriteria()
         descriptions = {
-            "true": criteria.true if criteria.true is not None else "Yes, the statement is true.",
+            "true": criteria.true if criteria.true is not None else "Yes",
             "false": criteria.false
             if criteria.false is not None
-            else "No, the statement is false.",
+            else "No",
         }
         default = (
             "Does the supplied state match the true criterion rather than the false criterion?"
@@ -155,8 +155,6 @@ def classification_input(state, question):
         "question": instructions if instructions.strip() else default,
         "options": options,
     }
-
-
 def format_response(request, model, results):
     answers = {}
     input_tokens = 0

@@ -26,9 +26,9 @@ backend development, and testing for contributors.
 
 The package and command are `open-cricket`; Python imports use `open_cricket`.
 See the [release guide](docs/technical/releases.md) for GitHub-to-PyPI setup.
-The [v0.3.0 release notes](docs/releases/v0.3.0.md) cover extensible
-case-insensitive answer codes, multi-question performance, and migration from
-v0.2.0.
+The [v0.3.1 release notes](docs/releases/v0.3.1.md) cover clearer Noul prompts
+and the expanded CLI examples. The [v0.3.0 notes](docs/releases/v0.3.0.md) cover
+extensible case-insensitive answer codes and multi-question performance.
 
 ## Quick start: local model, no server
 
@@ -62,6 +62,8 @@ For example:
 department routing, urgency, and incorrect charges.
 Descriptions belong in `criteria`; use null for a label needing no description.
 State, instructions, and descriptions also accept structured JSON objects and arrays.
+See the [CLI examples guide](examples/README.md) for product-review, incident,
+multilingual, structured-state, and 40-candidate requests.
 
 CLI output defaults to JSON. `--pretty` renders answers and probabilities;
 `--time` reports request time excluding model initialization. The file's `model`
@@ -245,6 +247,9 @@ probability mass of outputs such as `A` and `a` is combined before candidates ar
 normalized. After single-token alphanumerics run out, it uses longer codes (`AA`,
 `AB`, …) and combines all case variants. There is no fixed Choice candidate cap;
 model context and memory remain practical limits.
+
+Noul uses the same positional codes as other questions. Its default descriptions
+are simply `Yes` and `No`; explicit Noul criteria replace them.
 
 When all codes are single tokens, one forward scores them without EOS. Otherwise,
 the cached trie scores complete codes including EOS, distinguishing `A` from `AA`. It

@@ -1,0 +1,41 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "state": {
+    "service": "checkout-api",
+    "environment": "production",
+    "started_at": "2026-09-21T09:14:00Z",
+    "symptoms": [
+      "HTTP 500 rate increased from 0.2% to 18%",
+      "payment authorization latency exceeds 12 seconds",
+      "customers cannot complete purchases"
+    ],
+    "suspected_change": "database connection pool configuration deployed at 09:10Z"
+  },
+  "questions": {
+    "owner": {
+      "type": "choice",
+      "instructions": "Which team should lead the incident response?",
+      "criteria": {
+        "application": "Application code and service behavior",
+        "database": "Database availability, queries, and connection management",
+        "network": "Routing, DNS, load balancing, and connectivity",
+        "security": "Attacks, credential exposure, and unauthorized access"
+      }
+    },
+    "severity": {
+      "type": "score",
+      "instructions": "How severe is the customer impact?",
+      "criteria": [
+        "No customer impact",
+        "Minor degradation",
+        "Partial outage",
+        "Major outage",
+        "Critical business-wide outage"
+      ]
+    },
+    "rollback_recommended": {
+      "type": "noul",
+      "instructions": "Does the evidence support immediately rolling back the suspected change?"
+    }
+  }
+}

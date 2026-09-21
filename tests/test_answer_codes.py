@@ -33,7 +33,9 @@ class CodeBackend:
     def next_logprobs(self, prompt, prefix, allowed):
         self.calls.append((prompt, prefix, allowed))
         return {
-            token: math.log({65: .1, 97: .1, 66: .3, 98: .3}.get(token, .001))
+            token: math.log({
+                65: .1, 97: .1, 66: .3, 98: .3,
+            }.get(token, .001))
             for token in allowed
         }
 
@@ -70,7 +72,10 @@ class AnswerCodeTests(unittest.TestCase):
                          ['b', 'y'])
         self.assertEqual(len(backend.batches), 1)
         self.assertEqual(len(backend.batches[0]), 3)
-        self.assertTrue(all(allowed == (65, 97, 66, 98) for _, allowed in backend.batches[0]))
+        self.assertEqual(
+            [allowed for _, allowed in backend.batches[0]],
+            [(65, 97, 66, 98), (65, 97, 66, 98), (65, 97, 66, 98)],
+        )
         self.assertEqual(result['usage'], {'input_tokens': 6, 'output_tokens': 0})
 
     def test_bad_batch_cardinality_is_rejected(self):
@@ -148,6 +153,22 @@ class AnswerCodeTests(unittest.TestCase):
         self.assertEqual(rows['first']['code'], 'A')
         self.assertEqual(rows['first']['matched_alias'], 'a')
         self.assertEqual([alias['code'] for alias in rows['first']['aliases']], ['A', 'a'])
+
+    def test_true_and_false_labels_use_normal_positional_codes(self):
+        backend = CodeBackend()
+        result = classify(
+            backend,
+            'A refund was requested.',
+            'Was a refund requested?',
+            ['true', 'false'],
+        )
+        rows = {row['label']: row for row in result['options']}
+        self.assertEqual(rows['true']['code'], 'A')
+        self.assertEqual(rows['false']['code'], 'B')
+        self.assertEqual([alias['code'] for alias in rows['true']['aliases']], ['A', 'a'])
+        self.assertEqual([alias['code'] for alias in rows['false']['aliases']], ['B', 'b'])
+        self.assertIn('A. "true"', result['form'])
+        self.assertIn('B. "false"', result['form'])
 
     def test_unsupported_and_colliding_codes_are_skipped(self):
         backend = CodeBackend()
@@ -227,7 +248,8 @@ class AnswerCodeTests(unittest.TestCase):
         self.assertEqual(len(result['answers']['large']['probabilities']), 256)
 
     def test_typed_answers_restore_choice_score_and_noul_meanings(self):
-        result = LocalClient(backend=CodeBackend(), mode='answer_codes').system_one(
+        backend = CodeBackend()
+        result = LocalClient(backend=backend, mode='answer_codes').system_one(
             'message', {
                 'route': {'type': 'choice', 'criteria': {'billing': None, 'other': None}},
                 'urgency': {'type': 'score', 'criteria': ['Low', 'High']},
@@ -238,6 +260,8 @@ class AnswerCodeTests(unittest.TestCase):
         self.assertAlmostEqual(result['answers']['urgency']['score'], .75)
         self.assertEqual(result['answers']['urgency']['legend'], {'0': 'Low', '1': 'High'})
         self.assertAlmostEqual(result['answers']['refund']['noul'], .25)
+        self.assertIn('A. "true": "Yes"', backend.form)
+        self.assertIn('B. "false": "No"', backend.form)
 
     def test_sdk_cli_runnable_and_server_keep_the_response_contract(self):
         path = Path(__file__).resolve().parents[1] / 'examples/support.json'

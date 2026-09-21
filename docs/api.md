@@ -60,7 +60,7 @@ level always produces score 0.
 
 `"type":"noul"` asks a true/false question. `criteria` may be omitted, null, or an
 object with optional `true` and `false` descriptions. Each accepts a string,
-object, array, or null; missing/null descriptions use generic true/false wording.
+object, array, or null; missing/null descriptions use `Yes` and `No`.
 Put the proposition in `instructions` or describe both alternatives in `criteria`.
 
 ## Complete example

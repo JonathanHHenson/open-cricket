@@ -1,0 +1,46 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "state": {
+    "order_id": "ORD-2048",
+    "status": "delivered",
+    "delivered_at": "2026-09-18T14:32:00Z",
+    "items": [
+      {
+        "sku": "MUG-BLUE",
+        "quantity": 2
+      },
+      {
+        "sku": "TEA-EARL-GREY",
+        "quantity": 1
+      }
+    ],
+    "customer_message": "The parcel arrived, but one mug was shattered and the tea was missing. Please replace both items rather than refunding them."
+  },
+  "questions": {
+    "resolution": {
+      "type": "choice",
+      "instructions": "Which resolution did the customer request?",
+      "criteria": {
+        "replacement": "Send replacement goods",
+        "refund": "Return money to the customer",
+        "store credit": "Issue credit for a future order",
+        "information only": "No financial or fulfillment action requested"
+      }
+    },
+    "fulfillment_problem": {
+      "type": "choice",
+      "instructions": "What best summarizes the fulfillment problem?",
+      "criteria": {
+        "damaged and missing items": null,
+        "damaged item only": null,
+        "missing item only": null,
+        "late delivery": null,
+        "wrong address": null
+      }
+    },
+    "requires_action": {
+      "type": "noul",
+      "instructions": "Does this order require a fulfillment action?"
+    }
+  }
+}

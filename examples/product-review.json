@@ -1,0 +1,34 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "state": "The new dashboard is much easier to navigate and loads quickly. Exporting a report still fails every time, though, so I cannot use it for my monthly work.",
+  "questions": {
+    "sentiment": {
+      "type": "choice",
+      "instructions": "What is the overall sentiment of this review?",
+      "criteria": {
+        "positive": "Predominantly favorable",
+        "mixed": "Contains substantial praise and criticism",
+        "negative": "Predominantly unfavorable"
+      }
+    },
+    "satisfaction": {
+      "type": "score",
+      "instructions": "How satisfied is the reviewer overall?",
+      "criteria": [
+        "Very dissatisfied",
+        "Dissatisfied",
+        "Neutral or mixed",
+        "Satisfied",
+        "Very satisfied"
+      ]
+    },
+    "reports_bug": {
+      "type": "noul",
+      "instructions": "Does the review report a reproducible product failure?",
+      "criteria": {
+        "true": "A feature fails when the reviewer tries to use it",
+        "false": "No product failure is described"
+      }
+    }
+  }
+}

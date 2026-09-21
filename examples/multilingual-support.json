@@ -1,0 +1,33 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "state": "昨日からアカウントにログインできません。パスワードをリセットしましたが、確認コードが届きません。できるだけ早く助けてください。",
+  "questions": {
+    "language": {
+      "type": "choice",
+      "instructions": "What language is the customer primarily using?",
+      "criteria": {
+        "English": null,
+        "Japanese": null,
+        "Spanish": null,
+        "French": null,
+        "German": null,
+        "Other": null
+      }
+    },
+    "issue": {
+      "type": "choice",
+      "instructions": "What is the customer's main issue?",
+      "criteria": {
+        "account access": "Login, password, or verification-code problems",
+        "billing": "Charges, invoices, payments, or refunds",
+        "product fault": "A product feature is malfunctioning",
+        "sales": "Pre-purchase or pricing questions",
+        "other": null
+      }
+    },
+    "urgent": {
+      "type": "noul",
+      "instructions": "Does the customer explicitly ask for help quickly?"
+    }
+  }
+}
