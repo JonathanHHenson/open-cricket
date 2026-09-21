@@ -12,7 +12,6 @@ and Noul returns the relative probability of a yes/true answer.
 | [API reference](api.md) | Build requests and interpret responses and errors |
 | [Python SDK](sdk.md) | Run locally, connect over HTTP, and use framework integrations |
 | [Migrating from Jev](jev-migration.md) | Adapt an existing TypeSafe/Jev application |
-| [Project rename](renaming.md) | Update imports, commands, and configuration from LabelJudge |
 
 The CLI, SDKs, and HTTP API share the `state`, `model`, and `questions` request.
 [The support example](../examples/support.json) demonstrates all three types.
