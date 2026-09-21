@@ -38,6 +38,7 @@ def main():
     )
     parser.add_argument("--input", help="JSON file containing message and questions")
     parser.add_argument("--model", default="Qwen/Qwen2.5-0.5B-Instruct")
+    parser.add_argument("--backend", default="hf", choices=["hf", "mlx"])
     parser.add_argument("--revision", help="Optional Hugging Face commit revision")
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda", "mps"])
     parser.add_argument("--mode", default="sequence", choices=["sequence", "constrained"])
@@ -83,9 +84,9 @@ def main():
             parser.error("input must contain a nonempty questions list")
         for q in questions:
             build_form(payload["message"], q["question"], q["options"])
-        from .hf import HuggingFaceBackend
+        from .backend import load_backend
 
-        backend = HuggingFaceBackend(args.model, args.device, args.revision)
+        backend = load_backend(args.backend, args.model, args.device, args.revision)
         if args.time:
             request_started_at = perf_counter()
         result = {

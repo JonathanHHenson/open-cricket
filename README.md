@@ -79,6 +79,77 @@ uv run labeljudge --demo --mode constrained
 
 These use explicitly synthetic probabilities, not LLM predictions.
 
+## Faster local inference and Apple silicon
+
+Local classification reuses a request-local attention (KV) cache across answer
+prefixes. Branch changes trim ordinary KV caches back to their shared prefix;
+unsupported sliding-window or recurrent cache formats safely recompute instead.
+Hugging Face models that support `logits_to_keep` also compute only the final
+position's vocabulary logits. No labels or answer tokens are skipped, and
+normalisation still uses the full vocabulary. `model_calls` counts scored trie
+nodes, so it does not decrease even though each call does much less work.
+Custom backends implementing the original three-method protocol still work.
+For Hugging Face cache acceleration, use Transformers 4.57; older supported
+versions can fall back to full-prefix scoring.
+
+For Apple silicon, install and select the optional MLX runtime:
+
+```bash
+uv sync --extra mlx
+uv run labeljudge --backend mlx --input examples/support.json --pretty --time
+```
+
+MLX accepts compatible Hugging Face checkpoints and MLX-converted quantized
+checkpoints via `--model`. The selected checkpoint determines weight precision;
+quantization and lower precision can change probabilities and close rankings.
+The MLX extra is restricted to Apple silicon macOS and uses MLX-LM 0.28.x to
+remain compatible with this project's Transformers 4.x dependency. It requires
+an accessible Metal GPU. Hugging Face remains the default runtime.
+
+In Python, use `from labeljudge.mlx import MLXBackend` and pass `MLXBackend()`
+to `classify` or `as_runnable`. For the HTTP service:
+
+```bash
+uv sync --extra mlx --extra server
+LABELJUDGE_BACKEND=mlx uv run uvicorn labeljudge.server:app --host 127.0.0.1
+```
+
+Keep the model loaded between requests (for example through the HTTP service).
+Starting the CLI for every message reloads the model. The existing runnable
+serializes access to its model; async requests do not provide GPU batching.
+Caches are isolated per classification and are not retained across requests.
+
+### Measured performance
+
+A local Qwen2.5-0.5B-Instruct benchmark with four options, 112 prompt tokens and
+11 scored prefixes produced these warmed median request times, excluding load:
+
+| Runtime | Full-prefix baseline | Optimized | Speedup | Repeats |
+| --- | ---: | ---: | ---: | ---: |
+| Hugging Face, CPU, float32 | 1.350 s | 0.259 s | 5.2× | 5 |
+| MLX, Metal, checkpoint precision | 0.169 s | 0.057 s | 3.0× | 3 |
+
+These are one local workload, not a general performance guarantee or a comparison
+of MLX against Hugging Face MPS. The largest absolute probability difference
+between baseline and optimized scoring was 0.0000033 for HF and 0.024 for MLX
+(about 2.4 percentage points). MLX's lower-precision model arithmetic can vary
+between full-sequence and incremental evaluation. Float32 miniature-model
+regression tests verify both runtimes' branch rollback against uncached scoring
+to five decimal places. Evaluate your categories before switching runtime or
+weight precision.
+
+Reproduce the benchmark with:
+
+```bash
+uv run python examples/benchmark_backend.py --device cpu --repeats 5
+uv run python examples/benchmark_backend.py --backend mlx --repeats 5
+```
+
+The benchmark alternates cached and uncached runs after warmup and reports both
+speed and probability differences. Rust has not been introduced: eliminating
+repeated model computation provides the demonstrated gain, while rewriting the
+small Python trie would leave that model work unchanged.
+
 ## Category descriptions
 
 Each option can be either a label string or an object with a `label` and

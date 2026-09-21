@@ -31,11 +31,12 @@ def create_app(classifier=None):
     @asynccontextmanager
     async def lifespan(app):
         if classifier is None:
-            from .hf import HuggingFaceBackend
+            from .backend import load_backend
             from .integrations import as_runnable
 
             app.state.classifier = as_runnable(
-                HuggingFaceBackend(
+                load_backend(
+                    os.getenv("LABELJUDGE_BACKEND", "hf"),
                     os.getenv("LABELJUDGE_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"),
                     device=os.getenv("LABELJUDGE_DEVICE", "auto"),
                     revision=os.getenv("LABELJUDGE_REVISION"),

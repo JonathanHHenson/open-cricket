@@ -122,3 +122,14 @@ class CliTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BackendSelectionTests(unittest.TestCase):
+    def test_mlx_factory_is_lazy_and_forwards_configuration(self):
+        from labeljudge.backend import load_backend
+        with patch('labeljudge.mlx.MLXBackend') as factory:
+            result = load_backend('mlx', 'local/model', 'auto', 'revision')
+        factory.assert_called_once_with('local/model', 'auto', 'revision')
+        self.assertIs(result, factory.return_value)
+        with self.assertRaisesRegex(ValueError, 'backend must'):
+            load_backend('unknown')

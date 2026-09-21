@@ -1,4 +1,8 @@
-"""Implement this small protocol to add another full-logit model runtime."""
+"""Implement this small protocol to add another full-logit model runtime.
+
+Backends may additionally expose scorer(prompt), returning a request-local
+(prefix, allowed) callback. classify uses it for cache reuse when available.
+"""
 from typing import Protocol, Sequence, Mapping
 
 
@@ -17,3 +21,14 @@ class TokenBackend(Protocol):
         sample, prune candidates, or omit requested tokens because of top-k.
         """
         ...
+
+
+def load_backend(backend="hf", model="Qwen/Qwen2.5-0.5B-Instruct", device="auto", revision=None):
+    """Load the selected runtime without importing unselected optional dependencies."""
+    if backend == "hf":
+        from .hf import HuggingFaceBackend
+        return HuggingFaceBackend(model, device, revision)
+    if backend == "mlx":
+        from .mlx import MLXBackend
+        return MLXBackend(model, device, revision)
+    raise ValueError("backend must be hf or mlx")

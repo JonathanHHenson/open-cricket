@@ -80,9 +80,13 @@ def classify(backend, message, question, options, *, mode="sequence", temperatur
     paths = {
         label: backend.answer_ids(json.dumps(label, ensure_ascii=False)) for label, _ in categories
     }
+    scorer = getattr(backend, "scorer", None)
+    callback = scorer(prompt) if scorer is not None else (
+        lambda prefix, allowed: backend.next_logprobs(prompt, prefix, allowed)
+    )
     result = score_paths(
         paths,
-        lambda prefix, allowed: backend.next_logprobs(prompt, prefix, allowed),
+        callback,
         mode=mode,
         temperature=temperature,
     )
