@@ -26,8 +26,9 @@ backend development, and testing for contributors.
 
 The package and command are `open-cricket`; Python imports use `open_cricket`.
 See the [release guide](docs/technical/releases.md) for GitHub-to-PyPI setup.
-The [v0.2.0 release notes](docs/releases/v0.2.0.md) cover the new scoring default,
-performance results, and migration from v0.1.0.
+The [v0.3.0 release notes](docs/releases/v0.3.0.md) cover extensible
+case-insensitive answer codes, multi-question performance, and migration from
+v0.2.0.
 
 ## Quick start: local model, no server
 
@@ -277,9 +278,9 @@ differed by as much as 0.84; confidence thresholds need separate evaluation.
 
 When one request contains multiple questions, the Hugging Face GPU backend
 reuses the exact shared state prefix and batches the remaining question suffixes.
-The default 1.5B model on MPS measured 225 ms → 129 ms for four questions (1.74×)
-and 924 ms → 336 ms for sixteen (2.75×), using seven warmed repeats. Maximum
-probability differences from independent forwards were 0 and 0.00000026,
+The default 1.5B model on MPS measured 238 ms → 133 ms for four questions (1.79×)
+and 957 ms → 335 ms for sixteen (2.86×), using seven warmed repeats. Maximum
+probability differences from independent forwards were 0.000000015 and 0.00000349,
 respectively. Single-question requests keep the direct path. CPU, MLX, custom
 backends, and full-label scoring continue to evaluate questions sequentially.
 

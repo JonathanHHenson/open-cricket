@@ -4,6 +4,7 @@
 
 ## Release notes
 
+- [v0.3.0: extensible case-insensitive codes and question batching](../releases/v0.3.0.md)
 - [v0.2.0: default answer-code scoring and faster local inference](../releases/v0.2.0.md)
 
 The versioned notes include user-facing changes, compatibility guidance, and
@@ -19,8 +20,8 @@ does not install HF or MLX, so their optional runtime tests skip.
 Pushes to `main`, pull requests, and manual workflow runs validate artifacts
 without publishing. Publishing a GitHub release triggers the same checks followed
 by a PyPI upload. The release tag must exactly match `v` plus the version in
-`pyproject.toml` (for example, `v0.2.0`). Published prereleases also trigger uploads;
-use a PEP 440 prerelease version such as `0.2.0rc1` when appropriate.
+`pyproject.toml` (for example, `v0.3.0`). Published prereleases also trigger uploads;
+use a PEP 440 prerelease version such as `0.3.0rc1` when appropriate.
 
 ## Release checklist
 
@@ -32,9 +33,9 @@ use a PEP 440 prerelease version such as `0.2.0rc1` when appropriate.
 6. Verify the workflow and the resulting PyPI release, then install it in a clean
    environment with `python -m pip install 'open-cricket==<version>'`.
 
-For v0.2.0, the package version and local tag are already present. The checked-in
-`uv.lock` still records the root package as 0.1.0; refresh it as part of release
-preparation. Check publication status before publishing or changing existing tags.
+For v0.3.0, the package version is set but the local tag is not yet present. The
+checked-in `uv.lock` still records the root package as 0.2.0; refresh it as part of
+release preparation. Check publication status before publishing or changing tags.
 
 For a local packaging check:
 

@@ -6,8 +6,8 @@ and Noul returns the relative probability of a yes/true answer.
 
 ## User guides
 
-Read the [v0.2.0 release notes](releases/v0.2.0.md) for performance changes and
-migration guidance for the new answer-code default.
+Read the [v0.3.0 release notes](releases/v0.3.0.md) for expanded answer codes,
+multi-question performance changes, and upgrade guidance.
 
 | Guide | Use it to |
 | --- | --- |
