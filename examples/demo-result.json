@@ -1,0 +1,83 @@
+{
+  "answer": "technical",
+  "options": [
+    {
+      "label": "technical",
+      "probability": 0.47368421052631565,
+      "log_likelihood": -1.3093333199837625,
+      "score": -1.3093333199837625,
+      "token_ids": [
+        2,
+        9
+      ],
+      "trace": [
+        {
+          "token_id": 2,
+          "log_probability": -1.2039728043259361,
+          "scoring_log_probability": -1.2039728043259361
+        },
+        {
+          "token_id": 9,
+          "log_probability": -0.10536051565782628,
+          "scoring_log_probability": -0.10536051565782628
+        }
+      ]
+    },
+    {
+      "label": "refund status",
+      "probability": 0.4210526315789474,
+      "log_likelihood": -1.4271163556401456,
+      "score": -1.4271163556401456,
+      "token_ids": [
+        1,
+        3,
+        9
+      ],
+      "trace": [
+        {
+          "token_id": 1,
+          "log_probability": -0.5108256237659907,
+          "scoring_log_probability": -0.5108256237659907
+        },
+        {
+          "token_id": 3,
+          "log_probability": -0.2231435513142097,
+          "scoring_log_probability": -0.2231435513142097
+        },
+        {
+          "token_id": 9,
+          "log_probability": -0.6931471805599453,
+          "scoring_log_probability": -0.6931471805599453
+        }
+      ]
+    },
+    {
+      "label": "refund",
+      "probability": 0.10526315789473682,
+      "log_likelihood": -2.8134107167600364,
+      "score": -2.8134107167600364,
+      "token_ids": [
+        1,
+        9
+      ],
+      "trace": [
+        {
+          "token_id": 1,
+          "log_probability": -0.5108256237659907,
+          "scoring_log_probability": -0.5108256237659907
+        },
+        {
+          "token_id": 9,
+          "log_probability": -2.3025850929940455,
+          "scoring_log_probability": -2.3025850929940455
+        }
+      ]
+    }
+  ],
+  "mode": "sequence",
+  "temperature": 1.0,
+  "model_calls": 4,
+  "candidate_log_mass": -0.5621189181535411,
+  "probability_note": "Relative to supplied options; not calibrated correctness confidence.",
+  "demo_note": "SYNTHETIC probabilities: demonstrates mathematics, not classification quality"
+}

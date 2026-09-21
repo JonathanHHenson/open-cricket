@@ -1,0 +1,8 @@
+{
+  "message": "I was charged twice for my subscription yesterday. Please refund the extra payment; I still want to keep my account.",
+  "questions": [
+    {"id": "route", "question": "Which team should handle this message?", "options": ["billing", "technical support", "account cancellation", "other"]},
+    {"id": "refund", "question": "Is the customer requesting a refund?", "options": ["yes", "no", "unclear"]},
+    {"id": "sentiment", "question": "What sentiment is expressed?", "options": ["positive", "neutral", "negative"]}
+  ]
+}

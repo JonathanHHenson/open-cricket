@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "labeljudge"
+version = "0.1.0"
+description = "Questionnaire classification using causal-LM token probabilities"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+hf = ["torch>=2.2,<3", "transformers>=4.45,<5"]
+langchain = ["langchain-core>=1,<2"]
+langgraph = ["langchain-core>=1,<2", "langgraph>=1,<2"]
+server = ["langchain-core>=1,<2", "fastapi>=0.115,<1", "uvicorn>=0.30,<1"]
+test = ["langchain-core>=1,<2", "langgraph>=1,<2", "fastapi>=0.115,<1", "httpx>=0.27,<1"]
+
+[project.scripts]
+labeljudge = "labeljudge.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["labeljudge*"]

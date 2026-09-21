@@ -1,0 +1,24 @@
+test_form_validation_and_escaping (test_core.CoreTests.test_form_validation_and_escaping) ... ok
+test_invalid_paths_and_missing_probabilities (test_core.CoreTests.test_invalid_paths_and_missing_probabilities) ... ok
+test_local_constraint_changes_distribution (test_core.CoreTests.test_local_constraint_changes_distribution) ... ok
+test_sequence_matches_hand_computed_joint_likelihoods (test_core.CoreTests.test_sequence_matches_hand_computed_joint_likelihoods) ... ok
+test_temperature_is_applied_to_log_scores (test_core.CoreTests.test_temperature_is_applied_to_log_scores) ... ok
+test_underflow_stability (test_core.CoreTests.test_underflow_stability) ... ok
+test_chat_codes_probabilities_and_config (test_integrations.IntegrationTests.test_chat_codes_probabilities_and_config) ... ok
+test_invoke_batch_async_and_lcel (test_integrations.IntegrationTests.test_invoke_batch_async_and_lcel) ... ok
+test_missing_top_k_is_not_zero (test_integrations.IntegrationTests.test_missing_top_k_is_not_zero) ... ok
+test_real_langgraph_state_and_conditional_routing (test_integrations.IntegrationTests.test_real_langgraph_state_and_conditional_routing) ... ok
+test_http_contract_validation_auth_and_runnable (test_server.ServerTests.test_http_contract_validation_auth_and_runnable) ... /root/.local/lib/python3.12/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+  _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 1.539s
+
+OK
+
+Framework versions tested:
+langchain-core==1.6.3
+langgraph==1.2.11
+fastapi==0.141.1
+httpx==0.28.1
