@@ -1,5 +1,10 @@
 # Open Cricket
 
+[![Test, build, and publish](https://github.com/JonathanHHenson/open-cricket/actions/workflows/publish.yml/badge.svg?branch=main)](https://github.com/JonathanHHenson/open-cricket/actions/workflows/publish.yml)
+[![PyPI version](https://img.shields.io/pypi/v/open-cricket.svg)](https://pypi.org/project/open-cricket/)
+[![Python versions](https://img.shields.io/pypi/pyversions/open-cricket.svg)](https://pypi.org/project/open-cricket/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 ![Open Cricket mascot](docs/assets/open-cricket-icon.svg)
 
 Local structured decisions using causal language models. The CLI, Python SDK,
