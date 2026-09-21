@@ -10,20 +10,29 @@ architecture, training, calibrated confidence, performance, or full typed API.
 
 ## Quick start: local model, no server
 
-Use Python 3.10+ in a fresh virtual environment. From this directory:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and run the
+following commands from this directory. uv selects a compatible Python 3.10+
+interpreter, creates `.venv`, and installs the project with the requested
+optional dependencies:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e '.[hf,langgraph]'
-python -m labeljudge.cli --input examples/support.json
+uv sync --extra hf
+uv run labeljudge --input examples/support.json
+```
+
+The project's `uv.lock` pins transitive dependencies for reproducible installs.
+Use `uv sync --frozen --extra hf` in CI to require the lockfile without updating
+it. For a one-command setup and run, use:
+
+```bash
+uv run --extra hf labeljudge --input examples/support.json
 ```
 
 Add `--pretty` for a concise, human-readable view of the input, questions,
 answers, and option probabilities:
 
 ```bash
-python -m labeljudge.cli --input examples/support.json --pretty
+uv run labeljudge --input examples/support.json --pretty
 ```
 
 ```text
@@ -46,7 +55,7 @@ probabilities shown above are illustrative; actual values depend on the model.
 Add `--time` to either output mode to report how long scoring the request took:
 
 ```bash
-python -m labeljudge.cli --input examples/support.json --pretty --time
+uv run labeljudge --input examples/support.json --pretty --time
 ```
 
 Pretty output ends with `Processing time: 1.234 seconds`; detailed JSON includes
@@ -63,9 +72,9 @@ Use `--revision COMMIT` to pin a model snapshot. Remote model code is disabled.
 Try the mathematics without dependencies or a model download:
 
 ```bash
-python -m labeljudge.cli --demo
-python -m labeljudge.cli --demo --pretty
-python -m labeljudge.cli --demo --mode constrained
+uv run labeljudge --demo
+uv run labeljudge --demo --pretty
+uv run labeljudge --demo --mode constrained
 ```
 
 These use explicitly synthetic probabilities, not LLM predictions.
@@ -103,6 +112,15 @@ be mixed in one request. Labels must be unique. When an object is used, both
 `label` and a nonempty `description` are required.
 
 ## LangChain: direct local inference
+
+Install the local-model and LangChain extras if they were not included in the
+initial sync:
+
+```bash
+uv sync --extra hf --extra langchain
+```
+
+Then run Python scripts with `uv run python path/to/script.py`.
 
 ```python
 from labeljudge.hf import HuggingFaceBackend
@@ -173,6 +191,9 @@ to nested calls; the chat path has native asynchronous invocation.
 
 ## LangGraph: use as a node
 
+Install the LangGraph integration with `uv sync --extra langgraph`, adding
+`--extra hf` as well when the graph uses the local Hugging Face backend.
+
 ```python
 from labeljudge.integrations import graph_node
 
@@ -192,9 +213,9 @@ You do not need a service for Python/LangGraph usage. Use one when multiple
 applications share a loaded model or other languages need access:
 
 ```bash
-python -m pip install -e '.[hf,server]'
+uv sync --extra hf --extra server
 export LABELJUDGE_MODEL=Qwen/Qwen2.5-0.5B-Instruct
-uvicorn labeljudge.server:app --host 127.0.0.1 --port 8000
+uv run uvicorn labeljudge.server:app --host 127.0.0.1 --port 8000
 ```
 
 Model loads once at startup. `LABELJUDGE_DEVICE` and `LABELJUDGE_REVISION` are
@@ -304,9 +325,12 @@ results. Quoting message data is not a guarantee against prompt injection.
 ## Tests and verification
 
 ```bash
-python -m pip install -e '.[test]'
-python -m unittest discover -s tests -v
+uv sync --extra test
+uv run python -m unittest discover -s tests -v
 ```
+
+For a clean CI install that refuses to modify `uv.lock`, use
+`uv sync --frozen --extra test` before the test command.
 
 Tests cover hand-computed multi-token probabilities, shared prefixes,
 termination, local-vs-global normalisation, numerical stability, input errors,
