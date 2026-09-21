@@ -1,8 +1,45 @@
 {
   "message": "I was charged twice for my subscription yesterday. Please refund the extra payment; I still want to keep my account.",
   "questions": [
-    {"id": "route", "question": "Which team should handle this message?", "options": ["billing", "technical support", "account cancellation", "other"]},
-    {"id": "refund", "question": "Is the customer requesting a refund?", "options": ["yes", "no", "unclear"]},
-    {"id": "sentiment", "question": "What sentiment is expressed?", "options": ["positive", "neutral", "negative"]}
+    {
+      "id": "route",
+      "question": "Which team should handle this message?",
+      "options": [
+        {
+          "label": "billing",
+          "description": "Charges, payments, invoices, subscriptions, and refunds"
+        },
+        {
+          "label": "technical support",
+          "description": "Product errors, outages, setup problems, and troubleshooting"
+        },
+        {
+          "label": "account cancellation",
+          "description": "Requests to close, cancel, or permanently delete an account"
+        },
+        {
+          "label": "other",
+          "description": "Only when none of the other categories applies"
+        }
+      ]
+    },
+    {
+      "id": "refund",
+      "question": "Is the customer requesting a refund?",
+      "options": [
+        "yes",
+        "no",
+        "unclear"
+      ]
+    },
+    {
+      "id": "sentiment",
+      "question": "What sentiment is expressed?",
+      "options": [
+        "positive",
+        "neutral",
+        "negative"
+      ]
+    }
   ]
 }

@@ -19,6 +19,40 @@ python -m pip install -e '.[hf,langgraph]'
 python -m labeljudge.cli --input examples/support.json
 ```
 
+Add `--pretty` for a concise, human-readable view of the input, questions,
+answers, and option probabilities:
+
+```bash
+python -m labeljudge.cli --input examples/support.json --pretty
+```
+
+```text
+Input: I was charged twice for my subscription yesterday. Please refund the extra payment; I still want to keep my account.
+
+Result: route
+Question: Which team should handle this message?
+Answer: billing
+
+Options:
+  billing               72.34%
+  other                 15.21%
+  technical support      9.87%
+  account cancellation   2.58%
+```
+
+The standard output remains detailed JSON for scripts and integrations. The
+probabilities shown above are illustrative; actual values depend on the model.
+
+Add `--time` to either output mode to report how long scoring the request took:
+
+```bash
+python -m labeljudge.cli --input examples/support.json --pretty --time
+```
+
+Pretty output ends with `Processing time: 1.234 seconds`; detailed JSON includes
+`"processing_time_seconds": 1.234`. The timer starts after model initialization
+and covers classification of every question in the input.
+
 The first model run downloads `Qwen/Qwen2.5-0.5B-Instruct` through Hugging Face.
 It is a small demonstration default, not an accuracy recommendation. Pass
 `--model org/model` or a local checkpoint directory to choose another compatible
@@ -30,10 +64,43 @@ Try the mathematics without dependencies or a model download:
 
 ```bash
 python -m labeljudge.cli --demo
+python -m labeljudge.cli --demo --pretty
 python -m labeljudge.cli --demo --mode constrained
 ```
 
 These use explicitly synthetic probabilities, not LLM predictions.
+
+## Category descriptions
+
+Each option can be either a label string or an object with a `label` and
+`description`. Descriptions give the model classification context but do not
+change the response contract: `answer` and each result option's `label` remain
+strings.
+
+```json
+{
+  "message": "I was charged twice. Please refund the extra payment.",
+  "question": "Which team should handle this?",
+  "options": [
+    {
+      "label": "billing",
+      "description": "Charges, payments, subscriptions, and refunds"
+    },
+    {
+      "label": "technical support",
+      "description": "Product errors, outages, and troubleshooting"
+    },
+    {
+      "label": "other",
+      "description": "Only when none of the other categories applies"
+    }
+  ]
+}
+```
+
+Plain string options remain supported, and strings and described categories may
+be mixed in one request. Labels must be unique. When an object is used, both
+`label` and a nonempty `description` are required.
 
 ## LangChain: direct local inference
 
@@ -45,7 +112,11 @@ judge = as_runnable(HuggingFaceBackend("Qwen/Qwen2.5-0.5B-Instruct"))
 request = {
     "message": "I was charged twice. Please refund the extra payment.",
     "question": "Which team should handle this?",
-    "options": ["billing", "technical support", "other"],
+    "options": [
+        {"label": "billing", "description": "Charges, payments, and refunds"},
+        {"label": "technical support", "description": "Product errors and troubleshooting"},
+        {"label": "other", "description": "Only when no other category applies"},
+    ],
 }
 result = judge.invoke(request)
 print(result["answer"])

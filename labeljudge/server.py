@@ -3,19 +3,28 @@
 Default backend: local HF model specified by LABELJUDGE_MODEL.
 Custom backend: create_app(any compatible classification Runnable).
 """
-import os
+
 import hmac
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Header
+
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
+
 from .integrations import ProbabilityUnavailableError
+
+
+class Category(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    label: str = Field(min_length=1)
+    description: str = Field(min_length=1)
 
 
 class Request(BaseModel):
     model_config = ConfigDict(extra="forbid")
     message: str
     question: str = Field(min_length=1)
-    options: list[str] = Field(min_length=1)
+    options: list[str | Category] = Field(min_length=1)
 
 
 def create_app(classifier=None):
@@ -24,10 +33,14 @@ def create_app(classifier=None):
         if classifier is None:
             from .hf import HuggingFaceBackend
             from .integrations import as_runnable
-            app.state.classifier = as_runnable(HuggingFaceBackend(
-                os.getenv("LABELJUDGE_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"),
-                device=os.getenv("LABELJUDGE_DEVICE", "auto"),
-                revision=os.getenv("LABELJUDGE_REVISION")))
+
+            app.state.classifier = as_runnable(
+                HuggingFaceBackend(
+                    os.getenv("LABELJUDGE_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"),
+                    device=os.getenv("LABELJUDGE_DEVICE", "auto"),
+                    revision=os.getenv("LABELJUDGE_REVISION"),
+                )
+            )
         else:
             app.state.classifier = classifier
         yield
