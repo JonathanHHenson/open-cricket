@@ -27,7 +27,7 @@ def score_paths(
     mode: str = "sequence",
     temperature: float = 1.0,
 ):
-    """Score prefix-free paths including an explicit answer terminator.
+    """Score prefix-free token paths (label sequences include an explicit terminator).
 
     Callback returns ORIGINAL full-vocabulary log-softmax values for requested
     tokens, conditional on the prompt plus the supplied answer prefix.
@@ -56,6 +56,8 @@ def score_paths(
 
     raw, selected, traces = {}, {}, {}
     calls = 0
+    score_chain = getattr(next_logprobs, "score_chain", None)
+    pending = {}
     stack: list[tuple[Node, tuple[int, ...], float, float, list[dict[str, Any]]]] = [
         (root, (), 0.0, 0.0, [])
     ]
@@ -67,7 +69,22 @@ def score_paths(
             traces[node.label] = trace
             continue
         allowed = tuple(node.children)
-        lp = next_logprobs(prefix, allowed)
+        if score_chain is not None and prefix not in pending:
+            # Teacher-force deterministic stretches, including their final fork.
+            # Bound vocabulary-logit memory for unusually long labels.
+            requests = [(prefix, allowed)]
+            cursor, continuation = node, prefix
+            while len(cursor.children) == 1 and len(requests) < 16:
+                token, cursor = next(iter(cursor.children.items()))
+                continuation += (token,)
+                if cursor.label is not None:
+                    break
+                requests.append((continuation, tuple(cursor.children)))
+            values = score_chain(requests)
+            if len(values) != len(requests):
+                raise ValueError("Backend must return probabilities for every chain position")
+            pending.update((request[0], value) for request, value in zip(requests, values))
+        lp = pending.pop(prefix) if prefix in pending else next_logprobs(prefix, allowed)
         calls += 1
         for token in allowed:
             if token not in lp or not math.isfinite(lp[token]) or lp[token] > 1e-6:

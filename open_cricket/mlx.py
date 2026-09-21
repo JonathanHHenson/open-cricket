@@ -26,11 +26,27 @@ class MLXBackend(LocalBackend):
         self.limit = min(x for x in limits if isinstance(x, int) and x > 0)
 
     def _forward(self, ids, cache, use_cache):
+        logits, cache = self._forward_many(ids, cache, use_cache, 1)
+        return logits[0], cache
+
+    def _forward_many(self, ids, cache, use_cache, count):
         from mlx_lm.models.cache import make_prompt_cache
+        from mlx_lm.models.qwen2 import Model as Qwen2Model
 
         if cache is None and use_cache:
             cache = make_prompt_cache(self.model)
-        logits = self.model(self.mx.array([ids]), cache=cache)[0, -1].astype(self.mx.float32)
+        inputs = self.mx.array([ids])
+        # MLX-LM 0.28 Qwen2 projects every prompt position to the vocabulary.
+        # Slice hidden states first; restrict this shortcut to the known class.
+        if type(self.model) is Qwen2Model and getattr(self, "_last_logits", True):
+            hidden = self.model.model(inputs, cache=cache)[:, -count:]
+            if self.model.args.tie_word_embeddings:
+                output = self.model.model.embed_tokens.as_linear(hidden)
+            else:
+                output = self.model.lm_head(hidden)
+        else:
+            output = self.model(inputs, cache=cache)[:, -count:]
+        logits = output[0].astype(self.mx.float32)
         return logits, cache
 
     def _trim(self, cache, length):

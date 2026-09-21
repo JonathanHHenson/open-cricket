@@ -39,6 +39,7 @@ def create_app(classifier=None, *, model_name=None):
                 runtime=os.getenv("OPEN_CRICKET_BACKEND", "hf"),
                 device=os.getenv("OPEN_CRICKET_DEVICE", "auto"),
                 revision=os.getenv("OPEN_CRICKET_REVISION"),
+                mode=os.getenv("OPEN_CRICKET_MODE", "sequence"),
             )
         else:
             app.state.classifier = classifier

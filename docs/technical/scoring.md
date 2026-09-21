@@ -4,7 +4,8 @@
 
 ## Scored events
 
-Each label becomes `json.dumps(label, ensure_ascii=False)`, canonically tokenized
+In `sequence` and `constrained` modes, each label becomes
+`json.dumps(label, ensure_ascii=False)`, canonically tokenized
 and followed by one tokenizer EOS token. Answers are encoded without automatic
 special tokens at a fixed prompt boundary. Shared token prefixes form a trie;
 paths must be unique and prefix-free.
@@ -53,6 +54,34 @@ The synthetic demo illustrates the difference:
 Run `uv run open-cricket --demo --pretty`, then add `--mode constrained`.
 [Core tests](../../tests/test_core.py) verify these values.
 
+## Local answer-code mode
+
+`classify(..., mode="answer_codes")` maps categories to A–Z in input order and
+renders each code together with its original label and description. Each code
+must tokenize as one unique token (using `answer_ids(code)` and removing the
+protocol's single terminal token). Unsupported tokenization and more than 26
+options raise an error; there is no silent fallback or truncated candidate set.
+
+One uncached model forward supplies full-vocabulary-normalized probabilities for
+all code tokens. Only those first-token events are scored:
+
+```text
+L(y) = log P(code(y) | code_prompt)
+p(y) = softmax_y(L(y) / T)
+```
+
+EOS, quotes, and label spellings are not part of the scored output path. The
+model's subsequent continuation is unspecified. This differs from completed
+label likelihoods and introduces code/order bias. Original labels are restored
+in responses; Score and Noul use the resulting distribution as usual.
+Low-level results expose `mode="answer_codes"`, one scored node, and each row's
+`code`, single token ID, and trace. Candidate mass is the total first-code-token
+mass, so it is not comparable to label mode's completed-answer mass.
+
+`examples/benchmark_answer_codes.py` compares speed, predictions, probabilities,
+and reversed candidate order on a small synthetic smoke dataset. It does not
+establish general classification accuracy. Default scoring remains `sequence`.
+
 ## Traversal and diagnostics
 
 An explicit depth-first stack explores all branches. Each non-leaf node causes
@@ -95,5 +124,5 @@ confidence = clamp(1 - H(p) / log(K), 0, 1)
 ```
 
 For `K = 1`, confidence is 1. Concentration is not calibrated correctness.
-Provider answer-code scoring evaluates first-token codes, introduces code/order
+Local and provider answer-code scoring evaluates first-token codes, introduces code/order
 bias, and does not score the same events as local canonical answer sequences.

@@ -18,6 +18,8 @@ class HuggingFaceBackend(LocalBackend):
                 else ("mps" if torch.backends.mps.is_available() else "cpu")
             )
         self.device = device
+        # Small matrix batches can cost more than serial decoding on CPU.
+        self._batch_chains = device != "cpu"
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             model, revision=revision, trust_remote_code=False
         )
@@ -39,9 +41,13 @@ class HuggingFaceBackend(LocalBackend):
         self.limit = min(x for x in limits if isinstance(x, int) and x > 0)
 
     def _forward(self, ids, cache, use_cache):
+        logits, cache = self._forward_many(ids, cache, use_cache, 1)
+        return logits[0], cache
+
+    def _forward_many(self, ids, cache, use_cache, count):
         tensor = self.torch.tensor([ids], dtype=self.torch.long, device=self.device)
         length = len(ids) + (cache.get_seq_length() if cache is not None else 0)
-        kwargs = {"logits_to_keep": 1} if self._last_logits else {}
+        kwargs = {"logits_to_keep": count} if self._last_logits else {}
         with self.torch.inference_mode():
             output = self.model(
                 input_ids=tensor,
@@ -52,7 +58,7 @@ class HuggingFaceBackend(LocalBackend):
                 use_cache=use_cache,
                 **kwargs,
             )
-            return output.logits[0, -1].float(), output.past_key_values
+            return output.logits[0, -count:].float(), output.past_key_values
 
     def _trim(self, cache, length):
         # Sliding-window/recurrent caches cannot safely restore arbitrary branches.

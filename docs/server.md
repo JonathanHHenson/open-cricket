@@ -47,12 +47,14 @@ a header parameter rather than an OpenAPI security scheme.
 | `OPEN_CRICKET_BACKEND` | `hf` | Runtime: `hf` or `mlx` |
 | `OPEN_CRICKET_DEVICE` | `auto` | HF device; automatic selection tries CUDA, MPS, then CPU |
 | `OPEN_CRICKET_REVISION` | Unset | Optional checkpoint revision; use a commit for reproducibility |
+| `OPEN_CRICKET_MODE` | `sequence` | `sequence`, `constrained`, or opt-in `answer_codes` (up to 26 options) |
 | `OPEN_CRICKET_API_KEY` | Unset | Exact bearer secret; unset or empty disables authentication |
 
-Restart after changing runtime configuration. Default service scoring uses
-`sequence` mode and temperature `1.0`. These are not environment variables or
-request fields; use a [custom application](technical/architecture.md#custom-application)
-to change them.
+Restart after changing runtime configuration. Temperature defaults to `1.0`;
+use a [custom application](technical/architecture.md#custom-application) to change
+it. Mode is configured for the service, not in individual request bodies.
+`answer_codes` scores first-token codes in one model pass, preserves original
+response labels, and may change predictions. See [scoring semantics](technical/scoring.md).
 
 For Apple silicon with accessible Metal:
 

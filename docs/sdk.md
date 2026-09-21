@@ -43,13 +43,22 @@ Construction loads and potentially downloads the model. Reuse the client.
 | `runtime` | `hf` | `hf` or `mlx` |
 | `device` | `auto` | Runtime device selection |
 | `revision` | `None` | Optional checkpoint revision |
-| `mode` | `sequence` | `sequence` or `constrained` scoring |
-| `temperature` | `1.0` | Finite positive temperature on completed answer scores |
+| `mode` | `sequence` | `sequence`, `constrained`, or opt-in `answer_codes` scoring |
+| `temperature` | `1.0` | Finite positive temperature on answer scores |
 | `backend` | `None` | Custom token backend; bypasses runtime loading |
 
 Only `model` may be positional. An injected backend does not infer the model
 name; set it yourself. Read [scoring semantics](technical/scoring.md) before
 changing mode or temperature.
+
+For one model pass per question, use `LocalClient(mode="answer_codes")` (or pass
+the same mode to `as_runnable` / `classify`). Categories receive A–Z in criterion
+order; the tokenizer must encode each code as exactly one token. Up to 26 options
+are supported; unsupported tokenization or larger sets raise an error. Responses
+retain original labels, including Score levels and Noul's true/false meanings.
+Only the first code token is scored, without EOS, so probabilities and predictions
+can differ from label scoring. Evaluate your own data and candidate orders before
+switching. The default remains `sequence`.
 
 ### JSON requests and async calls
 

@@ -181,8 +181,13 @@ confidence, and token accounting.
 Local classification reuses a request-local attention (KV) cache across answer
 prefixes. Branch changes trim ordinary KV caches back to their shared prefix;
 unsupported sliding-window or recurrent cache formats safely recompute instead.
-Hugging Face models that support `logits_to_keep` also compute only the final
-position's vocabulary logits. No labels or answer tokens are skipped, and
+Deterministic stretches of the answer trie are scored together in one causal
+forward pass, up to 16 positions at a time. This combines opening quotes,
+shared label prefixes, and unbranched suffixes without changing tokenization.
+This is enabled for MLX and Hugging Face GPU inference; Hugging Face CPU retains
+token-by-token cached scoring because chain batching slowed the measured workload.
+Hugging Face models that support `logits_to_keep` compute only the scored
+positions' vocabulary logits. No labels or answer tokens are skipped, and
 normalisation still uses the full vocabulary. `model_calls` counts scored trie
 nodes, so it does not decrease even though each call does much less work.
 Custom backends implementing the original three-method protocol still work.
@@ -216,43 +221,109 @@ Starting the CLI for every message reloads the model. The existing runnable
 serializes access to its model; async requests do not provide GPU batching.
 Caches are isolated per classification and are not retained across requests.
 
+### One-pass answer-code scoring
+
+Use the opt-in `answer_codes` mode to score A–Z in one model pass per question,
+then map the probabilities back to the original labels:
+
+```bash
+uv run open-cricket --backend mlx --mode answer_codes --input examples/support.json --pretty --time
+```
+
+```python
+client = LocalClient(runtime="mlx", mode="answer_codes")
+```
+
+For the server, set `OPEN_CRICKET_MODE=answer_codes` and restart. The same mode
+works with `classify` and `as_runnable`; request/response bodies stay unchanged.
+It supports Choice, Score, and Noul with at most 26 options per question. Codes
+must each encode as one distinct token; unsupported tokenization and larger
+candidate sets fail explicitly.
+
+This mode scores only the first answer-code token, without quotes or EOS. It
+changes the scored events, so code/order bias can change predictions and
+probabilities. `sequence` remains the default. Evaluate representative cases
+before enabling it for your application.
+
+Compare speed and predictions, including reversed candidate order, with:
+
+```bash
+uv run python examples/benchmark_answer_codes.py --backend mlx
+uv run python examples/benchmark_answer_codes.py --device mps
+```
+
+The script uses 12 synthetic routing cases in two option orders; it is a smoke
+evaluation, not a representative accuracy benchmark or a held-out dataset.
+With the default 1.5B model, three timed repeats per case/order after warmup gave:
+
+| Runtime | Label scoring | Answer codes | Speedup |
+| --- | ---: | ---: | ---: |
+| MLX Metal | 79 ms | 46 ms | 1.72× |
+| Hugging Face MPS | 143 ms | 58 ms | 2.45× |
+
+Both runtimes matched the expected label in 24/24 code evaluations versus 22/24
+label evaluations. Code scoring used one scored node per question versus nine
+for these labels. Reversing option order changed zero code winners and two label
+winners. These same synthetic cases informed prompt development, so the results
+are not independent evidence of accuracy. Individual candidate probabilities
+differed by as much as 0.84; confidence thresholds need separate evaluation.
+
 ### Measured performance
 
-A local Qwen2.5-0.5B-Instruct benchmark with four options, 112 prompt tokens and
-11 scored prefixes produced these warmed median request times, excluding load:
+Local Qwen2.5-Instruct benchmarks with four options and 112 prompt tokens produced
+these warmed median request times, excluding model load:
 
-| Runtime | Full-prefix baseline | Optimized | Speedup | Repeats |
+| Runtime / checkpoint | Previous cached scorer | Chain scoring | Additional speedup | Repeats |
 | --- | ---: | ---: | ---: | ---: |
-| Hugging Face, CPU, float32 | 1.350 s | 0.259 s | 5.2× | 5 |
-| MLX, Metal, checkpoint precision | 0.169 s | 0.057 s | 3.0× | 3 |
+| Hugging Face MPS, 0.5B, float32 | 141 ms | 92 ms | 1.54× | 7 |
+| Hugging Face MPS, default 1.5B, float32 | 271 ms | 172 ms | 1.57× | 5 |
+| MLX Metal, 0.5B, checkpoint precision | 53 ms | 36 ms | 1.48× | 7 |
+| MLX Metal, default 1.5B, checkpoint precision | 128 ms | 86 ms | 1.49× | 7 |
 
-These measurements use the 0.5B checkpoint; they do not measure the new 1.5B
-default. The benchmark script keeps 0.5B as its default for reproducibility.
-These are one local workload, not a general performance guarantee or a comparison
-of MLX against Hugging Face MPS. The largest absolute probability difference
-between baseline and optimized scoring was 0.0000033 for HF and 0.024 for MLX
-(about 2.4 percentage points). MLX's lower-precision model arithmetic can vary
-between full-sequence and incremental evaluation. Float32 miniature-model
-regression tests verify both runtimes' branch rollback against uncached scoring
-to five decimal places. Evaluate your categories before switching runtime or
-weight precision.
+This is one local workload, not a general performance guarantee. Maximum absolute
+probability changes versus the previous cached scorer were 0.00000171 for HF MPS
+0.5B, 0.000000687 for HF MPS 1.5B,
+0.02377 for MLX 0.5B, and 0.00784 for MLX 1.5B (about 0.78 percentage points).
+Versus full-prefix scoring, MLX 1.5B differed by up to 0.04136. MLX's lower-precision
+arithmetic varies between full-sequence, incremental, and batched evaluation;
+close rankings can change. Float32 miniature-model tests verify both runtimes'
+token probabilities to five decimal places and accumulated chain scores to four.
+
+HF CPU chain scoring took 240 ms versus 211 ms for the previous cached scorer
+(0.5B, 5 repeats), so CPU keeps the previous path by default. CUDA is supported
+but was not benchmarked here. The benchmark keeps 0.5B as its default for
+reproducibility; pass `--model Qwen/Qwen2.5-1.5B-Instruct` to measure the default model.
 
 Reproduce the benchmark with:
 
 ```bash
 uv run python examples/benchmark_backend.py --device cpu --repeats 5
+uv run python examples/benchmark_backend.py --device mps --repeats 7
 uv run python examples/benchmark_backend.py --backend mlx --repeats 5
 ```
 
-The benchmark alternates cached and uncached runs after warmup and reports both
-speed and probability differences. Rust has not been introduced: eliminating
+An additional MLX Qwen2 optimization projects only the scored hidden states to
+the vocabulary, avoiding unused prompt logits. Against chain scoring alone,
+the default 1.5B checkpoint measured 86 ms → 83 ms for the 112-token prompt
+(9 repeats) and 197 ms → 179 ms for a synthetic 546-token prompt (7 repeats).
+Candidate probabilities were identical in those two comparisons. This shortcut
+supports the exact MLX-LM Qwen2 class; other architectures use their normal path.
+
+The benchmark rotates uncached, token-by-token cached, chain-scored, and fully
+optimized runs after warmup and reports speed and probability differences.
+`speedup_over_cached` compares all optimizations to token-by-token cache reuse;
+`speedup_over_chains` isolates the MLX vocabulary-projection improvement.
+Use `--chain-scoring on|off` to override the runtime default for experiments.
+Use `--message-repeats 32` to reproduce the longer synthetic prompt.
+Rust has not been introduced: eliminating
 repeated model computation provides the demonstrated gain, while rewriting the
 small Python trie would leave that model work unchanged.
 
 ## What happens mathematically?
 
-The questionnaire renders message data as a quoted JSON string, followed by the
-question, allowed options, and `Answer:`. The HF adapter uses the tokenizer's
+In the default label-scoring mode, the questionnaire renders message data as a
+quoted JSON string, followed by the question, allowed options, and `Answer:`.
+The HF adapter uses the tokenizer's
 chat template and assistant-generation boundary where available. The system
 instruction asks for one JSON-quoted option and immediate end of turn.
 
@@ -283,6 +354,20 @@ the original model on the complete candidate set and can change the winner.
 The default is `sequence`. Final temperature acts on completed scores in both
 modes. No length normalisation is used: longer spellings may be penalised.
 Code scoring reduces spelling-length effects but introduces code/order bias.
+
+### Would prefilling the opening quote help?
+
+Local scoring already generates zero output text tokens. If every answer starts
+with the same quote **token**, its log probability is a common additive term:
+omitting it preserves relative candidate probabilities, but changes raw likelihoods
+and candidate mass. A quote character is not guaranteed to be a separate token;
+retokenizing it as part of the prompt can change the scored events.
+
+The chain optimization keeps the original token boundaries and scores the quote
+alongside subsequent known tokens in one pass. It also combines deterministic
+suffixes, keeping complete likelihoods, traces, and EOS scoring intact. Floating
+point differences can still occur when batching positions, especially with
+lower-precision weights; this is mathematical equivalence, not a bitwise guarantee.
 
 The synthetic demo makes the distinction testable:
 

@@ -33,13 +33,24 @@ keep imports lazy.
 over the required-method fallback. Create a new session per classification;
 cache state must not survive between questions or requests.
 
+The callback may additionally provide `score_chain(requests)`, returning one
+probability mapping per `(prefix, allowed)` pair in order. Requests are consecutive
+prefixes along a deterministic trie stretch, with an optional final branching
+node. The scorer submits at most 16 positions together. All original token
+probabilities, including EOS, must be returned; full-vocabulary normalization
+still applies independently at each position. Callbacks without this method
+continue to score one node at a time. `model_calls` retains its historical meaning
+of scored trie nodes, not physical forward passes.
+
 The shared [CachedScorer](../../open_cricket/local.py) works as follows:
 
 1. Validate the requested prompt-plus-prefix against the context limit.
 2. Find its longest common prefix with the previous evaluation when cached.
-3. Retain at most `len(ids) - 1` tokens, leaving one to recompute next-token logits.
+3. Retain at most the first scored prefix's length minus one, leaving its final
+   token and the rest of the chain to recompute next-token logits.
 4. Trim to the retained length. If unsupported, discard the cache and recompute.
-5. Forward the uncached suffix, retain cache/tokens, then normalize probabilities.
+5. Forward the uncached suffix, retain cache/tokens, then normalize probabilities
+   at each requested position. Backends without `_forward_many` use serial calls.
 6. Clear session state and re-raise if forwarding or probability extraction fails.
 
 Traversal can move to siblings, ancestors, and repeated prefixes, so an append-only
@@ -58,11 +69,13 @@ Both adapters require an EOS and derive context bounds from model/tokenizer limi
 
 The adapter disables remote model code, loads a causal LM, moves it to the chosen
 device, and uses evaluation/inference mode. Automatic device selection prefers
-CUDA, then MPS, then CPU. Attention masks cover cached and new tokens; final-position
+CUDA, then MPS, then CPU. Attention masks cover cached and new tokens; scored-position
 logits are converted to float32 before full-vocabulary log-softmax.
 
-If `forward` explicitly supports `logits_to_keep`, the adapter requests one
-position's logits. Rollback only supports `DynamicCache` with ordinary
+If `forward` explicitly supports `logits_to_keep`, the adapter requests just the
+scored positions' logits (one for ordinary calls). Chain scoring is enabled on
+GPU; CPU retains serial cached scoring because small chain batches regressed
+the measured workload. Rollback only supports `DynamicCache` with ordinary
 `DynamicLayer` layers. Other formats recompute the full prefix. A cache exposing
 a crop method is not necessarily safe: sliding/recurrent state may have lost
 history. Older supported Transformers versions may miss the optimized path.
@@ -71,8 +84,16 @@ history. Older supported Transformers versions may miss the optimized path.
 
 MLX requires Apple silicon with accessible Metal and accepts devices `auto`/`mps`.
 It loads through MLX-LM, creates a prompt cache per session, and normalizes float32
-final-position logits across the vocabulary. Only exact ordinary `KVCache` layers
+scored-position logits across the vocabulary. Only exact ordinary `KVCache` layers
 are trimmed; unsupported layouts recompute.
+
+For the exact MLX-LM 0.28 `qwen2.Model` class, hidden states are sliced to the
+scored positions before the vocabulary projection. This avoids calculating
+unused prompt logits while retaining the full vocabulary at every scored
+position. Both tied embeddings and separate output heads are supported, including
+their quantized forms. Other model classes (including subclasses and wrappers)
+use their normal forward method. This shortcut must be reviewed if MLX-LM's
+Qwen2 implementation or the supported dependency range changes.
 
 Checkpoint weights determine precision, including quantized models. Float32 logit
 normalization does not remove differences from lower-precision forward arithmetic.

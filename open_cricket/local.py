@@ -56,7 +56,8 @@ class LocalBackend:
 
     def scorer(self, prompt):
         """Create an isolated scoring session; never retain another request's KV state."""
-        return CachedScorer(self, tuple(prompt))
+        session = CachedScorer(self, tuple(prompt))
+        return session if getattr(self, "_batch_chains", True) else session.__call__
 
 
 class CachedScorer:
@@ -66,8 +67,18 @@ class CachedScorer:
         self.previous = ()
 
     def __call__(self, prefix, allowed):
-        ids = self.prompt + tuple(prefix)
+        return self.score_chain([(prefix, allowed)])[0]
+
+    def score_chain(self, requests):
+        """Score consecutive known prefixes in one causal forward pass when supported."""
+        forward_many = getattr(self.backend, "_forward_many", None)
+        if forward_many is None and len(requests) > 1:
+            return [self(prefix, allowed) for prefix, allowed in requests]
+        ids = self.prompt + tuple(requests[-1][0])
         self.backend._validate(ids)
+        # The first scored position must be recomputed, even on a cache hit.
+        first_length = len(self.prompt) + len(requests[0][0])
+        self.backend._validate(self.prompt + tuple(requests[0][0]))
         common = 0
         if self.cache is not None:
             for left, right in zip(self.previous, ids):
@@ -75,13 +86,18 @@ class CachedScorer:
                     break
                 common += 1
             # Leave at least one token to recompute its next-token logits.
-            common = min(common, len(ids) - 1)
+            common = min(common, first_length - 1)
             if not self.backend._trim(self.cache, common):
                 self.cache, common = None, 0
         try:
-            logits, self.cache = self.backend._forward(ids[common:], self.cache, True)
+            if forward_many is not None and len(requests) > 1:
+                logits, self.cache = forward_many(ids[common:], self.cache, True, len(requests))
+            else:
+                last, self.cache = self.backend._forward(ids[common:], self.cache, True)
+                logits = [last]
             self.previous = ids
-            return self.backend._probabilities(logits, allowed)
+            return [self.backend._probabilities(row, allowed)
+                    for row, (_, allowed) in zip(logits, requests)]
         except Exception:
             self.cache, self.previous = None, ()
             raise
