@@ -13,34 +13,6 @@ by a PyPI upload. The release tag must exactly match `v` plus the version in
 `pyproject.toml` (initially `v0.1.0`). Published prereleases also trigger uploads;
 use a PEP 440 prerelease version such as `0.2.0rc1` when appropriate.
 
-## One-time account setup
-
-1. In the GitHub repository settings, create an environment named `pypi`.
-   Configure allowed release tags and required reviewers as appropriate.
-2. In PyPI, configure a GitHub Trusted Publisher. For a new package, use
-   [pending publisher registration](https://pypi.org/manage/account/publishing/).
-   For an existing project you control, use its Publishing settings.
-3. Enter these values:
-
-   | Field | Value |
-   | --- | --- |
-   | PyPI project name | `open-cricket` |
-   | GitHub owner | `JonathanHHenson` |
-   | Repository | The actual GitHub repository name; currently `open-llm-classifier` |
-   | Workflow filename | `publish.yml` |
-   | Environment | `pypi` |
-
-If the GitHub repository is renamed to `open-cricket`, use that name in the
-publisher configuration. The package rename does not itself rename the remote
-repository. PyPI name availability/ownership must be established during setup;
-adding these files does not reserve the name.
-
-No `PYPI_API_TOKEN` secret is needed. The publish job alone has `id-token: write`
-and exchanges its GitHub identity for short-lived credentials. It downloads the
-already-tested artifacts rather than rebuilding them in the publishing job.
-See [PyPI's Trusted Publishing instructions](https://docs.pypi.org/trusted-publishers/using-a-publisher/)
-and [new-project setup](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
-
 ## Release checklist
 
 1. Update `project.version` in `pyproject.toml` and run `uv lock` to refresh metadata.

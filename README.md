@@ -25,8 +25,7 @@ The [technical section](docs/technical/README.md) covers architecture, scoring,
 backend development, and testing for contributors.
 
 The package and command are `open-cricket`; Python imports use `open_cricket`.
-See the [rename guide](docs/renaming.md) for configuration changes and the
-[release guide](docs/technical/releases.md) for GitHub-to-PyPI setup.
+See the [release guide](docs/technical/releases.md) for GitHub-to-PyPI setup.
 
 ## Quick start: local model, no server
 
