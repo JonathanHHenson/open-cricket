@@ -58,16 +58,28 @@ class MLXBackend(LocalBackend):
     def prompt_ids(self, system, form, images=()):
         if not self._multimodal:
             return super().prompt_ids(system, form, images)
-        from mlx_vlm.prompt_utils import apply_chat_template
+        from mlx_vlm.prompt_utils import apply_chat_template, get_chat_template
         from mlx_vlm.utils import prepare_inputs
 
-        prompt = apply_chat_template(
+        messages = apply_chat_template(
             self.processor,
             self.config,
             [{"role": "system", "content": system}, {"role": "user", "content": form}],
             num_images=len(images),
-            enable_thinking=False,
+            return_messages=True,
         )
+        # MLX-VLM 0.3.12's formatting helper drops template kwargs. Render
+        # separately so reasoning-capable models really receive this setting.
+        if self.config["model_type"] in {"paligemma", "molmo", "florence2"}:
+            # Preserve MLX-VLM's non-chat model input convention.
+            prompt = messages[-1]
+        else:
+            prompt = get_chat_template(
+                self.processor,
+                messages,
+                add_generation_prompt=True,
+                enable_thinking=False,
+            )
         encoded = prepare_inputs(
             self.processor,
             images=list(images) or None,
@@ -83,21 +95,24 @@ class MLXBackend(LocalBackend):
             },
         )
 
-    def scorer(self, prompt):
-        if getattr(self, "_multimodal", False):
-            # VLMs can retain image-position/recurrent state outside their KV cache.
-            # Recompute complete prefixes so candidate branches stay independent.
-            return lambda prefix, allowed: self.next_logprobs(prompt, prefix, allowed)
-        return super().scorer(prompt)
-
     def _forward(self, ids, cache, use_cache, model_inputs=None):
         logits, cache = self._forward_many(ids, cache, use_cache, 1, model_inputs)
         return logits[0], cache
 
     def _forward_many(self, ids, cache, use_cache, count, model_inputs=None):
         if getattr(self, "_multimodal", False):
-            output = self.model(self.mx.array([ids]), cache=None, **(model_inputs or {}))
+            from contextlib import nullcontext
+            from .mlx_vision import selected_logits
+
+            projection = (
+                selected_logits(self.model, count)
+                if getattr(self, "_last_logits", True) else nullcontext()
+            )
+            with projection:
+                output = self.model(self.mx.array([ids]), cache=None, **(model_inputs or {}))
             logits = output.logits if hasattr(output, "logits") else output
+            # No KV reuse: preserve independent VLM position/recurrent state.
+            # CachedScorer can still combine consecutive answer positions.
             return logits[0, -count:].astype(self.mx.float32), None
         from mlx_lm.models.cache import make_prompt_cache
         from mlx_lm.models.qwen2 import Model as Qwen2Model
@@ -132,3 +147,12 @@ class MLXBackend(LocalBackend):
     def _select(self, logits, allowed):
         log_probs = logits - self.mx.logsumexp(logits)
         return log_probs[self.mx.array(list(allowed))].tolist()
+
+    def batch_next_logprobs(self, requests):
+        if getattr(self, "_multimodal", False) and getattr(self, "_batch_questions", True):
+            from .mlx_vision import score_shared_image_prefix
+
+            results = score_shared_image_prefix(self, requests)
+            if results is not None:
+                return results
+        return [self.next_logprobs(prompt, (), allowed) for prompt, allowed in requests]

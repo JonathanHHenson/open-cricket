@@ -350,6 +350,36 @@ class MLXCacheTests(unittest.TestCase):
             ([[7, 8, 2]], None, 3), ([[7, 8]], None, 3),
         ])
 
+    def test_mlx_vision_template_disables_thinking_and_keeps_images(self):
+        from unittest.mock import patch
+        import mlx.core as mx
+        from open_cricket.mlx import MLXBackend
+
+        class Processor:
+            chat_template = 'reasoning template'
+
+            def apply_chat_template(self, messages, **kwargs):
+                self.messages = messages
+                return 'instant' if kwargs.get('enable_thinking') is False else 'thinking'
+
+        backend = MLXBackend.__new__(MLXBackend)
+        backend._multimodal = True
+        backend.processor = Processor()
+        backend.config = {'model_type': 'qwen3_5'}
+        pixels = mx.ones((1, 3))
+        with patch('mlx_vlm.utils.prepare_inputs', return_value={
+            'input_ids': mx.array([[7, 8]]), 'pixel_values': pixels,
+            'attention_mask': mx.array([[1, 1]]),
+        }) as prepare:
+            for images in ((), ('apple.png', 'second.png')):
+                prompt = backend.prompt_ids('system', 'question', images)
+                self.assertEqual(prepare.call_args.kwargs['prompts'], 'instant')
+                self.assertEqual(prepare.call_args.kwargs['images'], list(images) or None)
+                content = backend.processor.messages[-1]['content']
+                self.assertEqual(sum(item['type'] == 'image' for item in content), len(images))
+                self.assertEqual(tuple(prompt), (7, 8))
+                self.assertIs(prompt.model_inputs['pixel_values'], pixels)
+
     def test_qwen_vision_grid_uses_integer_frame_counts(self):
         import mlx.core as mx
         from open_cricket.mlx_vision import QwenVisionAdapter

@@ -9,6 +9,7 @@ Read the [API reference](../api.md) for the public contract, then use these guid
 | [Architecture](architecture.md) | Modules, request lifecycle, concurrency, server injection |
 | [Scoring](scoring.md) | Token tries, normalization, diagnostics, numerical invariants |
 | [Backend development](backends.md) | Token protocol, cache lifecycle, runtime adapters |
+| [Qwen answer-code validation](qwen-answer-codes.md) | Non-thinking template fix, example results, and remaining model errors |
 | [Contributing and testing](contributing.md) | Setup, test coverage, debugging, benchmarking |
 | [PyPI releases](releases.md) | Trusted Publisher setup, GitHub Actions, and release procedure |
 
