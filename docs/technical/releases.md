@@ -4,6 +4,7 @@
 
 ## Release notes
 
+- [v0.4.0: image inputs and vision-language models](../releases/v0.4.0.md)
 - [v0.3.1: clearer Noul prompts and more CLI examples](../releases/v0.3.1.md)
 - [v0.3.0: extensible case-insensitive codes and question batching](../releases/v0.3.0.md)
 - [v0.2.0: default answer-code scoring and faster local inference](../releases/v0.2.0.md)
@@ -34,7 +35,7 @@ use a PEP 440 prerelease version such as `0.3.0rc1` when appropriate.
 6. Verify the workflow and the resulting PyPI release, then install it in a clean
    environment with `python -m pip install 'open-cricket==<version>'`.
 
-For v0.3.1, keep `pyproject.toml` and the root package entry in `uv.lock` aligned.
+For v0.4.0, keep `pyproject.toml` and the root package entry in `uv.lock` aligned.
 Check publication status before publishing or changing tags.
 
 For a local packaging check:

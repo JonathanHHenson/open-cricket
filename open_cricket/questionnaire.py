@@ -68,6 +68,7 @@ def _answer_codes(backend, size):
             selected.append(tokenize("".join(characters)))
             if len(selected) == size:
                 return selected
+    raise RuntimeError("Unable to construct enough answer codes")
 
 
 def normalize_options(options):
@@ -151,12 +152,13 @@ def _prepare(backend, message, question, options, mode, temperature, images=()):
     if not math.isfinite(temperature) or temperature <= 0:
         raise ValueError("temperature must be finite and positive")
     codes = {}
+    path_labels = {}
+    path_aliases = {}
     if mode == "answer_codes":
         available = _answer_codes(backend, len(categories))
         single_token = all(len(ids) == 2 for _, aliases in available for _, ids in aliases)
         paths = {}
-        path_labels = {}
-        path_aliases = {}
+
         for index, ((label, _), (code, aliases)) in enumerate(zip(categories, available)):
             codes[label] = code
             for alias_index, (alias, ids) in enumerate(aliases):

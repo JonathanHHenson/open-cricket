@@ -27,9 +27,10 @@ backend development, and testing for contributors.
 
 The package and command are `open-cricket`; Python imports use `open_cricket`.
 See the [release guide](docs/technical/releases.md) for GitHub-to-PyPI setup.
-The [v0.3.1 release notes](docs/releases/v0.3.1.md) cover clearer Noul prompts
-and the expanded CLI examples. The [v0.3.0 notes](docs/releases/v0.3.0.md) cover
-extensible case-insensitive answer codes and multi-question performance.
+The [v0.4.0 release notes](docs/releases/v0.4.0.md) cover image inputs and
+vision-language model support. The [v0.3.1 notes](docs/releases/v0.3.1.md)
+cover clearer Noul prompts and expanded CLI examples; the
+[v0.3.0 notes](docs/releases/v0.3.0.md) cover answer codes and question batching.
 
 ## Quick start: local model, no server
 

@@ -6,7 +6,7 @@ Run any request from the repository root:
 uv run open-cricket --input examples/product-review.json --pretty --time
 uv run open-cricket --input examples/incident-triage.json --pretty --time
 uv run open-cricket --input examples/multilingual-support.json --pretty --time
-uv run open-cricket --backend hf --mode sequence --input examples/qwen35-image.json --pretty --time
+uv run open-cricket --backend hf --mode sequence --input examples/apple-image.json --pretty --time
 uv run open-cricket --input examples/structured-order.json --pretty --time
 uv run open-cricket --input examples/many-candidates.json --pretty --time
 ```
@@ -17,7 +17,7 @@ uv run open-cricket --input examples/many-candidates.json --pretty --time
 | `product-review.json` | Mixed sentiment, a five-level score, and custom Noul criteria |
 | `incident-triage.json` | Structured JSON state and operational severity |
 | `multilingual-support.json` | Unicode input and multilingual routing |
-| `qwen35-image.json` | Qwen 3.5 vision classification using a bundled local PNG |
+| `apple-image.json` | Qwen2.5-VL image classification using a bundled local PNG |
 | `structured-order.json` | Nested objects, arrays, and fulfillment decisions |
 | `many-candidates.json` | Forty Choice candidates and multi-character answer codes |
 
@@ -44,15 +44,14 @@ uv run open-cricket --backend mlx \
 The first local run may download the configured model. Keep the process alive for
 repeated measurements; launching the CLI again reloads the model.
 
-`qwen35-image.json` works with Hugging Face or MLX on Apple silicon. Run it from
+`apple-image.json` works with Hugging Face or MLX on Apple silicon. Run it from
 the repository root so its relative image path resolves:
 
 ```bash
 uv run open-cricket \
   --backend hf \
-  --model Qwen/Qwen3.5-0.8B \
   --mode sequence \
-  --input examples/qwen35-image.json \
+  --input examples/apple-image.json \
   --pretty
 ```
 
@@ -61,13 +60,14 @@ For MLX image inference, install the vision dependencies and select `mlx`:
 ```bash
 uv sync --extra mlx
 uv run open-cricket --backend mlx --mode sequence \
-  --input examples/qwen35-image.json --pretty --time
+  --input examples/apple-image.json --pretty --time
 ```
 
 Use the original Qwen checkpoint or a vision-capable MLX conversion; a conversion
 that removes the vision weights cannot accept images.
-For Qwen2.5-VL, replace the model with `Qwen/Qwen2.5-VL-3B-Instruct` or
-`mlx-community/Qwen2.5-VL-3B-Instruct-4bit` using `--model`.
+The example selects `Qwen/Qwen2.5-VL-3B-Instruct`. To compare a vision-capable
+conversion or Qwen 3.5, pass `--model mlx-community/Qwen2.5-VL-3B-Instruct-4bit`
+or `--model Qwen/Qwen3.5-0.8B`.
 
 The example uses `sequence` mode to avoid the compact model's positional answer-code
 bias. Its image is stored at `examples/assets/red-apple.png` and can be replaced with

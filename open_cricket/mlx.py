@@ -35,12 +35,15 @@ class MLXBackend(LocalBackend):
                 self.model.vision_tower = Qwen25VisionAdapter(self.model.vision_tower)
             self.tokenizer = self.processor.tokenizer
         else:
-            self.model, self.tokenizer, config = load(
+            loaded = load(
                 model,
                 revision=revision,
                 return_config=True,
                 tokenizer_config={"trust_remote_code": False},
             )
+            self.model, self.tokenizer = loaded[:2]
+            if len(loaded) == 3:
+                config = loaded[2]
         self.config = config
         self.eos = self.tokenizer.eos_token_id
         if self.eos is None:

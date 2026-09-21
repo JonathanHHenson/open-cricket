@@ -8,6 +8,8 @@ from typing import Any
 class ModelPrompt(tuple):
     """Token IDs plus processor-created tensors needed for a multimodal prefill."""
 
+    model_inputs: dict[str, Any]
+
     def __new__(cls, ids, model_inputs=None):
         value = super().__new__(cls, ids)
         value.model_inputs = model_inputs or {}
@@ -19,6 +21,7 @@ class LocalBackend:
     eos: int
     limit: int
     _last_logits: bool
+    _batch_chains: bool
 
     def prompt_ids(self, system, form, images=()):
         if images:
@@ -50,7 +53,7 @@ class LocalBackend:
         if len(ids) > self.limit:
             raise ValueError(f"Input exceeds context limit ({self.limit}); no silent truncation")
 
-    def _forward(self, ids, cache, use_cache):
+    def _forward(self, ids, cache, use_cache, model_inputs=None):
         raise NotImplementedError
 
     def _trim(self, cache, length):

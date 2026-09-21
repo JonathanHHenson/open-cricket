@@ -91,6 +91,7 @@ class HuggingFaceBackend(LocalBackend):
             return super().prompt_ids(system, form, images)
         content = [{"type": "image", "url": source} for source in images]
         content.append({"type": "text", "text": form})
+        assert self.processor is not None
         encoded = self.processor.apply_chat_template(
             [
                 {"role": "system", "content": system},
@@ -189,7 +190,7 @@ class HuggingFaceBackend(LocalBackend):
                 return [self.next_logprobs(prompt, (), allowed) for prompt, allowed in requests]
 
         pending = sorted(range(len(sequences)), key=lambda i: lengths[i], reverse=True)
-        results = [None] * len(requests)
+        results = [{} for _ in requests]
         with self.torch.inference_mode():
             while pending:
                 width = lengths[pending[0]]
