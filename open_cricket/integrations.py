@@ -11,7 +11,7 @@ class ProbabilityUnavailableError(ValueError):
     """Provider omitted probabilities needed for an honest comparison."""
 
 
-def as_runnable(backend, *, model="Qwen/Qwen2.5-1.5B-Instruct", mode="sequence", temperature=1.0):
+def as_runnable(backend, *, model="Qwen/Qwen2.5-1.5B-Instruct", mode="answer_codes", temperature=1.0):
     """Runnable consuming state/model/questions and returning typed answers."""
     from langchain_core.runnables import RunnableLambda
 

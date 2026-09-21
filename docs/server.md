@@ -47,7 +47,7 @@ a header parameter rather than an OpenAPI security scheme.
 | `OPEN_CRICKET_BACKEND` | `hf` | Runtime: `hf` or `mlx` |
 | `OPEN_CRICKET_DEVICE` | `auto` | HF device; automatic selection tries CUDA, MPS, then CPU |
 | `OPEN_CRICKET_REVISION` | Unset | Optional checkpoint revision; use a commit for reproducibility |
-| `OPEN_CRICKET_MODE` | `sequence` | `sequence`, `constrained`, or opt-in `answer_codes` (up to 26 options) |
+| `OPEN_CRICKET_MODE` | `answer_codes` | Single-token codes (up to 26 options); `sequence` or `constrained` for full labels |
 | `OPEN_CRICKET_API_KEY` | Unset | Exact bearer secret; unset or empty disables authentication |
 
 Restart after changing runtime configuration. Temperature defaults to `1.0`;

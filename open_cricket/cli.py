@@ -46,7 +46,8 @@ def main():
     parser.add_argument("--backend", default="hf", choices=["hf", "mlx"])
     parser.add_argument("--revision", help="Optional Hugging Face commit revision")
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda", "mps"])
-    parser.add_argument("--mode", default="sequence", choices=["sequence", "constrained", "answer_codes"])
+    parser.add_argument("--mode", choices=["sequence", "constrained", "answer_codes"],
+                        help="Scoring mode (default: answer_codes; sequence for --demo)")
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--demo", action="store_true", help="Synthetic math demo; no LLM")
     parser.add_argument(
@@ -60,6 +61,8 @@ def main():
         help="Show request processing time, excluding model initialization",
     )
     args = parser.parse_args()
+    if args.mode is None:
+        args.mode = "sequence" if args.demo else "answer_codes"
     if args.demo and args.mode == "answer_codes":
         parser.error("--demo supports sequence or constrained; answer_codes requires --input")
     input_message = None

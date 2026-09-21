@@ -91,7 +91,7 @@ class CoreTests(unittest.TestCase):
             {"label": "billing", "description": "Charges, payments, and refunds"},
             {"label": "other", "description": "Only when no category applies"},
         ]
-        result = classify(backend, "charged twice", "Which team?", options)
+        result = classify(backend, "charged twice", "Which team?", options, mode="sequence")
 
         self.assertEqual(result["answer"], "billing")
         self.assertEqual([row["label"] for row in result["options"]], ["billing", "other"])

@@ -8,7 +8,7 @@ from .systemone import SystemOneRequest, classification_input, format_response
 
 class LocalClient:
     def __init__(self, model="Qwen/Qwen2.5-1.5B-Instruct", *, backend=None,
-                 runtime="hf", device="auto", revision=None, mode="sequence", temperature=1.0):
+                 runtime="hf", device="auto", revision=None, mode="answer_codes", temperature=1.0):
         from .backend import load_backend
         if mode not in {"sequence", "constrained", "answer_codes"}:
             raise ValueError("mode must be sequence, constrained, or answer_codes")

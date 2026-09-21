@@ -27,9 +27,11 @@ imported at use sites. Preserve that separation in public exports and extensions
 2. Acquire the per-client lock and evaluate questions in insertion order.
 3. `classification_input` renders structured content and maps Choice to its
    labels, Score to numeric-string indices, and Noul to `true`/`false`.
-4. `classify` builds the questionnaire and prompt tokens. Each label is JSON-quoted,
-   independently tokenized, and terminated by EOS.
-5. Use `backend.scorer(prompt)` when available, otherwise call `next_logprobs`
+4. `classify` defaults to mapping labels to single-token A–Z codes in the prompt.
+   Explicit `sequence` / `constrained` modes instead tokenize JSON-quoted labels
+   followed by EOS.
+5. Code mode calls `next_logprobs` once for all codes. Label modes use
+   `backend.scorer(prompt)` when available, otherwise call `next_logprobs`
    with the prompt, prefix, and allowed tokens for each trie node.
 6. `score_paths` explores every path and returns detailed scoring rows.
 7. After classification, `format_response` checks complete normalized criterion

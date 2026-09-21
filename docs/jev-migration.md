@@ -116,7 +116,9 @@ Nested JSON values are preserved; structured content is serialized into the loca
 model's prompt. Questions are identified by their original map keys; these keys
 are not included in model prompts. Instructions may be omitted or null, matching
 the official SDK's schema. Empty instructions use a generic question for the type.
-Choice accepts 1–255 nonblank labels; Score accepts 1–10 levels, including the
+The wire schema accepts 1–255 nonblank Choice labels. Default `answer_codes`
+scoring supports up to 26; configure `sequence` for larger sets or full label
+likelihoods. Score accepts 1–10 levels, including the
 single-level case allowed by SDK 0.7.0 (descriptive rubrics normally need two or more).
 Malformed requests return 422 with field details. Missing or incorrect configured
 bearer credentials return 401. `/docs` exposes the server's OpenAPI interface.

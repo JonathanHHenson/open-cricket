@@ -103,27 +103,29 @@ class AnswerCodeTests(unittest.TestCase):
         path = Path(__file__).resolve().parents[1] / 'examples/support.json'
         payload = json.loads(path.read_text())
         backend = CodeBackend()
-        client = LocalClient(model=payload['model'], backend=backend, mode='answer_codes')
+        client = LocalClient(model=payload['model'], backend=backend)
         expected = client.invoke(payload)
         self.assertEqual(set(expected), {'model', 'answers', 'usage'})
         self.assertEqual(expected['usage'], {'input_tokens': 6, 'output_tokens': 0})
-        runnable = as_runnable(backend, model=client.model, mode='answer_codes')
+        runnable = as_runnable(backend, model=client.model)
         self.assertEqual(runnable.invoke(payload), expected)
         output = io.StringIO()
-        with patch.object(sys, 'argv', ['open-cricket', '--input', str(path), '--mode', 'answer_codes']), \
+        with patch.object(sys, 'argv', ['open-cricket', '--input', str(path)]), \
              patch('open_cricket.backend.load_backend', return_value=backend), \
              contextlib.redirect_stdout(output):
             main()
         self.assertEqual(json.loads(output.getvalue()), expected)
-        with patch.dict('os.environ', {'OPEN_CRICKET_MODE': 'answer_codes', 'OPEN_CRICKET_API_KEY': ''}), \
+        with patch.dict('os.environ', {'OPEN_CRICKET_API_KEY': ''}, clear=True), \
              patch('open_cricket.backend.load_backend', return_value=backend):
             with TestClient(create_app(model_name=client.model)) as http:
                 response = http.post('/v1/systemone', json=payload)
                 self.assertEqual(response.status_code, 200, response.text)
                 self.assertEqual(response.json(), expected)
 
-    def test_default_remains_sequence_and_bad_modes_do_not_load_models(self):
-        self.assertEqual(LocalClient(backend=CodeBackend()).mode, 'sequence')
+    def test_default_is_answer_codes_and_bad_modes_do_not_load_models(self):
+        self.assertEqual(LocalClient(backend=CodeBackend()).mode, 'answer_codes')
+        self.assertEqual(LocalClient(backend=CodeBackend(), mode='sequence').mode, 'sequence')
+        self.assertEqual(classify(CodeBackend(), 'x', 'q', ['a', 'b'])['mode'], 'answer_codes')
         with patch('open_cricket.backend.load_backend') as load:
             with self.assertRaisesRegex(ValueError, 'mode must'):
                 LocalClient(mode='typo')

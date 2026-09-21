@@ -80,7 +80,10 @@ mass, so it is not comparable to label mode's completed-answer mass.
 
 `examples/benchmark_answer_codes.py` compares speed, predictions, probabilities,
 and reversed candidate order on a small synthetic smoke dataset. It does not
-establish general classification accuracy. Default scoring remains `sequence`.
+establish general classification accuracy. Default classification uses
+`answer_codes`. Select `sequence` explicitly for completed label likelihoods or
+more than 26 options. The low-level `score_paths` function and synthetic CLI demo
+retain sequence scoring because they operate on explicit token paths.
 
 ## Traversal and diagnostics
 

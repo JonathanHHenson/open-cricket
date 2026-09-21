@@ -223,27 +223,28 @@ Caches are isolated per classification and are not retained across requests.
 
 ### One-pass answer-code scoring
 
-Use the opt-in `answer_codes` mode to score A–Z in one model pass per question,
-then map the probabilities back to the original labels:
+The default `answer_codes` mode scores A–Z in one model pass per question,
+then maps the probabilities back to the original labels:
 
 ```bash
-uv run open-cricket --backend mlx --mode answer_codes --input examples/support.json --pretty --time
+uv run open-cricket --backend mlx --input examples/support.json --pretty --time
 ```
 
 ```python
-client = LocalClient(runtime="mlx", mode="answer_codes")
+client = LocalClient(runtime="mlx")
 ```
 
-For the server, set `OPEN_CRICKET_MODE=answer_codes` and restart. The same mode
-works with `classify` and `as_runnable`; request/response bodies stay unchanged.
+The server, `classify`, and `as_runnable` also default to `answer_codes`;
+request/response bodies stay unchanged. An explicit `OPEN_CRICKET_MODE` overrides
+the server default.
 It supports Choice, Score, and Noul with at most 26 options per question. Codes
 must each encode as one distinct token; unsupported tokenization and larger
 candidate sets fail explicitly.
 
 This mode scores only the first answer-code token, without quotes or EOS. It
 changes the scored events, so code/order bias can change predictions and
-probabilities. `sequence` remains the default. Evaluate representative cases
-before enabling it for your application.
+probabilities. Use `mode="sequence"`, CLI `--mode sequence`, or server
+`OPEN_CRICKET_MODE=sequence` for full label scoring or more than 26 options.
 
 Compare speed and predictions, including reversed candidate order, with:
 
@@ -321,7 +322,7 @@ small Python trie would leave that model work unchanged.
 
 ## What happens mathematically?
 
-In the default label-scoring mode, the questionnaire renders message data as a
+In explicit `sequence` label-scoring mode, the questionnaire renders message data as a
 quoted JSON string, followed by the question, allowed options, and `Answer:`.
 The HF adapter uses the tokenizer's
 chat template and assistant-generation boundary where available. The system
@@ -351,7 +352,8 @@ events, not all text representations of the underlying category.
 `mode="constrained"` instead renormalises at every trie branch. It implements
 locally masked generation. This is mathematically different from conditioning
 the original model on the complete candidate set and can change the winner.
-The default is `sequence`. Final temperature acts on completed scores in both
+The default is `answer_codes`; select `sequence` for full label likelihoods.
+Final temperature acts on completed scores in both label-scoring
 modes. No length normalisation is used: longer spellings may be penalised.
 Code scoring reduces spelling-length effects but introduces code/order bias.
 

@@ -43,7 +43,7 @@ Construction loads and potentially downloads the model. Reuse the client.
 | `runtime` | `hf` | `hf` or `mlx` |
 | `device` | `auto` | Runtime device selection |
 | `revision` | `None` | Optional checkpoint revision |
-| `mode` | `sequence` | `sequence`, `constrained`, or opt-in `answer_codes` scoring |
+| `mode` | `answer_codes` | Single-token codes; `sequence` or `constrained` for full label scoring |
 | `temperature` | `1.0` | Finite positive temperature on answer scores |
 | `backend` | `None` | Custom token backend; bypasses runtime loading |
 
@@ -58,7 +58,8 @@ are supported; unsupported tokenization or larger sets raise an error. Responses
 retain original labels, including Score levels and Noul's true/false meanings.
 Only the first code token is scored, without EOS, so probabilities and predictions
 can differ from label scoring. Evaluate your own data and candidate orders before
-switching. The default remains `sequence`.
+switching modes. The default is `answer_codes`; use `mode="sequence"` for full
+label scoring or more than 26 options.
 
 ### JSON requests and async calls
 

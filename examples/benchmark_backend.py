@@ -47,10 +47,10 @@ def main():
     message = " ".join([message] * args.message_repeats)
     options = ["billing", "billing refund", "technical support", "other"]
     clients = {
-        "original": LocalClient(model=args.model, backend=Uncached()),
-        "cached": LocalClient(model=args.model, backend=Cached()),
-        "chains": LocalClient(model=args.model, backend=backend),
-        "optimized": LocalClient(model=args.model, backend=backend),
+        "original": LocalClient(model=args.model, backend=Uncached(), mode="sequence"),
+        "cached": LocalClient(model=args.model, backend=Cached(), mode="sequence"),
+        "chains": LocalClient(model=args.model, backend=backend, mode="sequence"),
+        "optimized": LocalClient(model=args.model, backend=backend, mode="sequence"),
     }
     timings = {name: [] for name in clients}
     results = {}

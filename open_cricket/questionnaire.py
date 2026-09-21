@@ -86,7 +86,7 @@ def build_form(message, question, options):
     return _build_form(message, question, normalize_options(options))
 
 
-def classify(backend, message, question, options, *, mode="sequence", temperature=1.0):
+def classify(backend, message, question, options, *, mode="answer_codes", temperature=1.0):
     categories = normalize_options(options)
     if mode not in {"sequence", "constrained", "answer_codes"}:
         raise ValueError("mode must be sequence, constrained, or answer_codes")
