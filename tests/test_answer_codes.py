@@ -32,7 +32,10 @@ class CodeBackend:
 
     def next_logprobs(self, prompt, prefix, allowed):
         self.calls.append((prompt, prefix, allowed))
-        return {token: math.log({65: .2, 66: .6}.get(token, .001)) for token in allowed}
+        return {
+            token: math.log({65: .1, 97: .1, 66: .3, 98: .3}.get(token, .001))
+            for token in allowed
+        }
 
 
 class BatchCodeBackend(CodeBackend):
@@ -43,7 +46,10 @@ class BatchCodeBackend(CodeBackend):
     def batch_next_logprobs(self, requests):
         self.batches.append(requests)
         return [
-            {token: math.log({65: .2, 66: .6}.get(token, .001)) for token in allowed}
+            {
+                token: math.log({65: .1, 97: .1, 66: .3, 98: .3}.get(token, .001))
+                for token in allowed
+            }
             for _, allowed in requests
         ]
 
@@ -64,7 +70,7 @@ class AnswerCodeTests(unittest.TestCase):
                          ['b', 'y'])
         self.assertEqual(len(backend.batches), 1)
         self.assertEqual(len(backend.batches[0]), 3)
-        self.assertTrue(all(allowed == (65, 66) for _, allowed in backend.batches[0]))
+        self.assertTrue(all(allowed == (65, 97, 66, 98) for _, allowed in backend.batches[0]))
         self.assertEqual(result['usage'], {'input_tokens': 6, 'output_tokens': 0})
 
     def test_bad_batch_cardinality_is_rejected(self):
@@ -85,7 +91,7 @@ class AnswerCodeTests(unittest.TestCase):
         self.assertEqual(result['mode'], 'answer_codes')
         self.assertEqual(result['model_calls'], 1)
         self.assertEqual(result['prompt_tokens'], 2)
-        self.assertEqual(backend.calls, [([99, 98], (), (65, 66))])
+        self.assertEqual(backend.calls, [([99, 98], (), (65, 97, 66, 98))])
         self.assertAlmostEqual(result['candidate_log_mass'], math.log(.8))
         self.assertAlmostEqual(result['options'][0]['probability'], .75)
         self.assertEqual(result['options'][0]['code'], 'B')
@@ -116,20 +122,32 @@ class AnswerCodeTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'valid log probabilities'):
                     classify(backend, 'x', 'q', ['a'], mode='answer_codes')
 
-    def test_all_62_codes_and_single_option(self):
+    def test_all_36_base_codes_and_single_option(self):
         backend = CodeBackend()
-        result = classify(backend, 'x', 'q', [str(i) for i in range(62)], mode='answer_codes')
-        self.assertEqual(len(result['options']), 62)
+        result = classify(backend, 'x', 'q', [str(i) for i in range(36)], mode='answer_codes')
+        self.assertEqual(len(result['options']), 36)
         self.assertEqual(result['model_calls'], 1)
         by_label = {row['label']: row['code'] for row in result['options']}
         self.assertEqual(by_label['0'], 'A')
         self.assertEqual(by_label['25'], 'Z')
-        self.assertEqual(by_label['26'], 'a')
-        self.assertEqual(by_label['51'], 'z')
-        self.assertEqual(by_label['52'], '0')
-        self.assertEqual(by_label['61'], '9')
+        self.assertEqual(by_label['26'], '0')
+        self.assertEqual(by_label['35'], '9')
         result = classify(backend, 'x', 'q', ['only'], mode='answer_codes')
         self.assertEqual(result['options'][0]['probability'], 1)
+
+    def test_lowercase_predictions_are_aggregated_into_canonical_codes(self):
+        backend = CodeBackend()
+        scores = {65: .01, 97: .69, 66: .2, 98: .1}
+        with patch.object(backend, 'next_logprobs', side_effect=lambda prompt, prefix, allowed: {
+            token: math.log(scores[token]) for token in allowed
+        }):
+            result = classify(backend, 'x', 'q', ['first', 'second'])
+        rows = {row['label']: row for row in result['options']}
+        self.assertEqual(result['answer'], 'first')
+        self.assertAlmostEqual(rows['first']['probability'], .7)
+        self.assertEqual(rows['first']['code'], 'A')
+        self.assertEqual(rows['first']['matched_alias'], 'a')
+        self.assertEqual([alias['code'] for alias in rows['first']['aliases']], ['A', 'a'])
 
     def test_unsupported_and_colliding_codes_are_skipped(self):
         backend = CodeBackend()
@@ -162,20 +180,21 @@ class AnswerCodeTests(unittest.TestCase):
         self.assertEqual(len(rows), 256)
         self.assertEqual(rows['A']['token_ids'], [65, 0])
         self.assertEqual(rows['AA']['token_ids'], [65, 65, 0])
-        self.assertAlmostEqual(rows['A']['log_likelihood'], math.log(.1 * .5))
-        self.assertAlmostEqual(rows['AA']['log_likelihood'], math.log(.1 * .1 * .5))
+        self.assertAlmostEqual(rows['A']['log_likelihood'], math.log(2 * .1 * .5))
+        self.assertAlmostEqual(rows['AA']['log_likelihood'], math.log(4 * .1 * .1 * .5))
         self.assertAlmostEqual(sum(row['probability'] for row in rows.values()), 1)
 
     def test_codes_extend_past_two_characters(self):
-        codes = _answer_codes(CodeBackend(), 62 + 62 ** 2 + 1)
-        self.assertEqual(codes[-2], ('99', (57, 57, 0)))
-        self.assertEqual(codes[-1], ('AAA', (65, 65, 65, 0)))
+        codes = _answer_codes(CodeBackend(), 36 + 36 ** 2 + 1)
+        self.assertEqual(codes[-2][0], '99')
+        self.assertEqual(codes[-1][0], 'AAA')
+        self.assertEqual(codes[-1][1][0], ('AAA', (65, 65, 65, 0)))
 
     def test_multitoken_codes_support_original_backend_protocol(self):
         backend = CodeBackend()
         backend.scorer = None
-        result = classify(backend, 'x', 'q', [str(i) for i in range(63)])
-        self.assertEqual(len(result['options']), 63)
+        result = classify(backend, 'x', 'q', [str(i) for i in range(37)])
+        self.assertEqual(len(result['options']), 37)
         self.assertTrue(any(prefix == (65, 65) for _, prefix, _ in backend.calls))
 
     def test_single_tokens_precede_multitoken_characters(self):
@@ -187,16 +206,19 @@ class AnswerCodeTests(unittest.TestCase):
             self.assertEqual(small['options'][0]['code'], 'B')
             with patch.object(backend, 'scorer', return_value=lambda prefix, allowed:
                               {token: math.log(.1) for token in allowed}):
-                large = classify(backend, 'x', 'q', [str(i) for i in range(62)])
+                large = classify(backend, 'x', 'q', [str(i) for i in range(36)])
         rows = {row['label']: row for row in large['options']}
-        self.assertEqual(rows['61']['code'], 'A')
-        self.assertEqual(rows['61']['token_ids'], [123, 124, 0])
+        self.assertEqual(rows['35']['code'], 'A')
+        self.assertEqual(rows['35']['matched_alias'], 'a')
+        self.assertEqual(rows['35']['aliases'][0]['token_ids'], [123, 124, 0])
 
     def test_mixed_question_lengths_do_not_use_root_only_batching(self):
         backend = BatchCodeBackend()
         with patch.object(backend, 'scorer', return_value=lambda prefix, allowed:
                           {token: math.log(.1) for token in allowed}), \
-             patch.object(backend, 'next_logprobs', return_value={65: math.log(.1)}):
+             patch.object(backend, 'next_logprobs', return_value={
+                 65: math.log(.05), 97: math.log(.05)
+             }):
             result = LocalClient(backend=backend).system_one('x', {
                 'small': {'type': 'choice', 'criteria': {'only': None}},
                 'large': {'type': 'choice', 'criteria': {str(i): None for i in range(256)}},

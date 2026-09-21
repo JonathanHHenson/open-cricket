@@ -1,0 +1,352 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "device": "mps",
+  "dtype": "torch.float32",
+  "torch": "2.14.0",
+  "transformers": "4.57.6",
+  "repeats": 3,
+  "rows": [
+    {
+      "questions": 1,
+      "candidates": 4,
+      "median_seconds": {
+        "open_cricket": 0.06078629201510921,
+        "simple_jev": 0.16706616699229926
+      },
+      "samples_seconds": {
+        "open_cricket": [
+          0.059050667041447014,
+          0.06078629201510921,
+          0.06085429200902581
+        ],
+        "simple_jev": [
+          0.16931379202287644,
+          0.1658309170161374,
+          0.16706616699229926
+        ]
+      },
+      "simple_jev_rejection": null,
+      "open_prompt_tokens": 153,
+      "open_max_scored_tokens": 1
+    },
+    {
+      "questions": 4,
+      "candidates": 4,
+      "median_seconds": {
+        "open_cricket": 0.13194545899750665,
+        "simple_jev": 0.3451584579888731
+      },
+      "samples_seconds": {
+        "open_cricket": [
+          0.13440358400112018,
+          0.13143083301838487,
+          0.13194545899750665
+        ],
+        "simple_jev": [
+          0.34563595795771107,
+          0.3451584579888731,
+          0.34475208300864324
+        ]
+      },
+      "simple_jev_rejection": null,
+      "open_prompt_tokens": 153,
+      "open_max_scored_tokens": 1
+    },
+    {
+      "questions": 16,
+      "candidates": 4,
+      "median_seconds": {
+        "open_cricket": 0.3315074580023065,
+        "simple_jev": 1.1012764159822837
+      },
+      "samples_seconds": {
+        "open_cricket": [
+          0.3315074580023065,
+          0.3306398330023512,
+          0.33335416699992493
+        ],
+        "simple_jev": [
+          1.101401749998331,
+          1.1012764159822837,
+          1.1001237500458956
+        ]
+      },
+      "simple_jev_rejection": null,
+      "open_prompt_tokens": 153,
+      "open_max_scored_tokens": 1
+    },
+    {
+      "questions": 1,
+      "candidates": 50,
+      "median_seconds": {
+        "open_cricket": 0.1463360420311801,
+        "simple_jev": 0.6387598749715835
+      },
+      "samples_seconds": {
+        "open_cricket": [
+          0.14693216601153836,
+          0.1456930839922279,
+          0.1463360420311801
+        ],
+        "simple_jev": [
+          0.626487375004217,
+          0.6387598749715835,
+          0.6392001250060275
+        ]
+      },
+      "simple_jev_rejection": null,
+      "open_prompt_tokens": 494,
+      "open_max_scored_tokens": 1
+    },
+    {
+      "questions": 1,
+      "candidates": 62,
+      "median_seconds": {
+        "open_cricket": 0.18652337504317984
+      },
+      "samples_seconds": {
+        "open_cricket": [
+          0.18652337504317984,
+          0.18789812497561797,
+          0.18542379199061543
+        ]
+      },
+      "simple_jev_rejection": [
+        "questions.route_0.choice.criteria",
+        "  Dictionary should have at most 50 items after validation, not 62 [type=too_long, input_value={'candidate 0': None, 'ca...e, 'candidate 61': None}, input_type=dict]"
+      ],
+      "open_prompt_tokens": 590,
+      "open_max_scored_tokens": 1
+    },
+    {
+      "questions": 1,
+      "candidates": 63,
+      "median_seconds": {
+        "open_cricket": 0.1896612910204567
+      },
+      "samples_seconds": {
+        "open_cricket": [
+          0.1901131669874303,
+          0.1896612910204567,
+          0.18803449999541044
+        ]
+      },
+      "simple_jev_rejection": [
+        "questions.route_0.choice.criteria",
+        "  Dictionary should have at most 50 items after validation, not 63 [type=too_long, input_value={'candidate 0': None, 'ca...e, 'candidate 62': None}, input_type=dict]"
+      ],
+      "open_prompt_tokens": 598,
+      "open_max_scored_tokens": 1
+    },
+    {
+      "questions": 1,
+      "candidates": 128,
+      "median_seconds": {
+        "open_cricket": 3.426788583979942
+      },
+      "samples_seconds": {
+        "open_cricket": [
+          3.4210642920224927,
+          3.430162874981761,
+          3.426788583979942
+        ]
+      },
+      "simple_jev_rejection": [
+        "questions.route_0.choice.criteria",
+        "  Dictionary should have at most 50 items after validation, not 128 [type=too_long, input_value={'candidate 0': None, 'ca..., 'candidate 127': None}, input_type=dict]"
+      ],
+      "open_prompt_tokens": 1159,
+      "open_max_scored_tokens": 3
+    },
+    {
+      "questions": 1,
+      "candidates": 256,
+      "median_seconds": {
+        "open_cricket": 6.929685708018951
+      },
+      "samples_seconds": {
+        "open_cricket": [
+          7.003849917033222,
+          6.929685708018951,
+          6.908564125013072
+        ]
+      },
+      "simple_jev_rejection": [
+        "questions.route_0.choice.criteria",
+        "  Dictionary should have at most 50 items after validation, not 256 [type=too_long, input_value={'candidate 0': None, 'ca..., 'candidate 255': None}, input_type=dict]"
+      ],
+      "open_prompt_tokens": 2364,
+      "open_max_scored_tokens": 3
+    }
+  ],
+  "smoke_accuracy": [
+    {
+      "state": "I was charged twice. Please refund the duplicate payment.",
+      "expected": "billing",
+      "reversed": false,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "I was charged twice. Please refund the duplicate payment.",
+      "expected": "billing",
+      "reversed": true,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "Where can I download my latest invoice?",
+      "expected": "billing",
+      "reversed": false,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "Where can I download my latest invoice?",
+      "expected": "billing",
+      "reversed": true,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "My card expired and I need to update my payment details.",
+      "expected": "billing",
+      "reversed": false,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "My card expired and I need to update my payment details.",
+      "expected": "billing",
+      "reversed": true,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "Please explain the extra charge on this month's bill.",
+      "expected": "billing",
+      "reversed": false,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "Please explain the extra charge on this month's bill.",
+      "expected": "billing",
+      "reversed": true,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "The app crashes every time I open the settings page.",
+      "expected": "technical support",
+      "reversed": false,
+      "open_cricket": "technical support",
+      "simple_jev": "technical support"
+    },
+    {
+      "state": "The app crashes every time I open the settings page.",
+      "expected": "technical support",
+      "reversed": true,
+      "open_cricket": "technical support",
+      "simple_jev": "technical support"
+    },
+    {
+      "state": "I cannot log in even after resetting my password.",
+      "expected": "technical support",
+      "reversed": false,
+      "open_cricket": "technical support",
+      "simple_jev": "technical support"
+    },
+    {
+      "state": "I cannot log in even after resetting my password.",
+      "expected": "technical support",
+      "reversed": true,
+      "open_cricket": "technical support",
+      "simple_jev": "technical support"
+    },
+    {
+      "state": "File uploads fail with error 500.",
+      "expected": "technical support",
+      "reversed": false,
+      "open_cricket": "technical support",
+      "simple_jev": "technical support"
+    },
+    {
+      "state": "File uploads fail with error 500.",
+      "expected": "technical support",
+      "reversed": true,
+      "open_cricket": "technical support",
+      "simple_jev": "technical support"
+    },
+    {
+      "state": "The screen is blank after the latest update.",
+      "expected": "technical support",
+      "reversed": false,
+      "open_cricket": "technical support",
+      "simple_jev": "technical support"
+    },
+    {
+      "state": "The screen is blank after the latest update.",
+      "expected": "technical support",
+      "reversed": true,
+      "open_cricket": "technical support",
+      "simple_jev": "technical support"
+    },
+    {
+      "state": "Are you hiring designers?",
+      "expected": "other",
+      "reversed": false,
+      "open_cricket": "other",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "Are you hiring designers?",
+      "expected": "other",
+      "reversed": true,
+      "open_cricket": "other",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "I would like to discuss a marketing partnership.",
+      "expected": "other",
+      "reversed": false,
+      "open_cricket": "other",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "I would like to discuss a marketing partnership.",
+      "expected": "other",
+      "reversed": true,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "Where is your company's head office?",
+      "expected": "other",
+      "reversed": false,
+      "open_cricket": "other",
+      "simple_jev": "other"
+    },
+    {
+      "state": "Where is your company's head office?",
+      "expected": "other",
+      "reversed": true,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "Thank you for a great product!",
+      "expected": "other",
+      "reversed": false,
+      "open_cricket": "other",
+      "simple_jev": "billing"
+    },
+    {
+      "state": "Thank you for a great product!",
+      "expected": "other",
+      "reversed": true,
+      "open_cricket": "billing",
+      "simple_jev": "billing"
+    }
+  ]
+}

@@ -52,11 +52,12 @@ name; set it yourself. Read [scoring semantics](technical/scoring.md) before
 changing mode or temperature.
 
 For compact answer codes, use `LocalClient(mode="answer_codes")` (or pass
-the same mode to `as_runnable` / `classify`). Categories receive `A–Z`, `a–z`,
-then `0–9` in criterion order. Codes are case-sensitive and must each encode as
-distinct token sequences. Single-token alphanumerics take priority; when exhausted,
-remaining valid characters and longer codes (`AA`, `AB`, …) are used without a
-fixed candidate cap. Context and memory limits still apply. Responses
+the same mode to `as_runnable` / `classify`). Categories receive `A–Z`, then
+`0–9` in criterion order. Codes are case-insensitive: uppercase and lowercase
+output probabilities are combined per candidate before temperature is applied.
+Single-token alphanumerics take priority; when exhausted, longer codes (`AA`,
+`AB`, …) are used and all case variants are combined. There is no fixed candidate
+cap; context and memory limits still apply. Responses
 retain original labels, including Score levels and Noul's true/false meanings.
 Single-token sets score without EOS in one pass. If any code needs multiple tokens,
 all codes are scored with EOS using the cached trie. Probabilities and predictions

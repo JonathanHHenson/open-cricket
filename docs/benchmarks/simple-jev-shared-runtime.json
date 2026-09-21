@@ -1,0 +1,160 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "device": "mps",
+  "dtype": "torch.float32",
+  "torch": "2.14.0",
+  "transformers": "4.57.6",
+  "repeats": 7,
+  "rows": [
+    {
+      "questions": 1,
+      "median_end_to_end_seconds": {
+        "open_cricket": 0.060051499982364476,
+        "simple_jev": 0.16795483301393688
+      },
+      "simple_jev_median_score_seconds": 0.1655699170078151,
+      "simple_jev_last_metrics": {
+        "backend": "transformers",
+        "prefill_strategy": "shared_prefix",
+        "prefix_tokens": 477,
+        "suffix_batch_sizes": [
+          1
+        ],
+        "engine_forwards": 2,
+        "branch_prompt_tokens": 478,
+        "computed_prompt_tokens": 478,
+        "logical_prefill_tokens": 478,
+        "padded_suffix_tokens": 1,
+        "branch_output_tokens": 0,
+        "scored_positions": 1,
+        "backend_seconds": 0.1653114579967223,
+        "compile_seconds": 0.0021217080065980554,
+        "score_seconds": 0.16536083398386836
+      },
+      "input_tokens": {
+        "simple_jev": 478,
+        "open_cricket": 153
+      },
+      "answers": {
+        "simple_jev": [
+          "billing"
+        ],
+        "open_cricket": [
+          "billing"
+        ]
+      }
+    },
+    {
+      "questions": 4,
+      "median_end_to_end_seconds": {
+        "open_cricket": 0.13119491701945662,
+        "simple_jev": 0.3457609999459237
+      },
+      "simple_jev_median_score_seconds": 0.3369154999963939,
+      "simple_jev_last_metrics": {
+        "backend": "transformers",
+        "prefill_strategy": "shared_prefix",
+        "prefix_tokens": 311,
+        "suffix_batch_sizes": [
+          4
+        ],
+        "engine_forwards": 2,
+        "branch_prompt_tokens": 2044,
+        "computed_prompt_tokens": 1111,
+        "logical_prefill_tokens": 1111,
+        "padded_suffix_tokens": 800,
+        "branch_output_tokens": 0,
+        "scored_positions": 4,
+        "backend_seconds": 0.3393437499762513,
+        "compile_seconds": 0.00886541698127985,
+        "score_seconds": 0.33940312499180436
+      },
+      "input_tokens": {
+        "simple_jev": 1111,
+        "open_cricket": 612
+      },
+      "answers": {
+        "simple_jev": [
+          "billing",
+          "billing",
+          "billing",
+          "billing"
+        ],
+        "open_cricket": [
+          "billing",
+          "billing",
+          "billing",
+          "billing"
+        ]
+      }
+    },
+    {
+      "questions": 16,
+      "median_end_to_end_seconds": {
+        "open_cricket": 0.3379739999654703,
+        "simple_jev": 1.113551207992714
+      },
+      "simple_jev_median_score_seconds": 1.0686112080002204,
+      "simple_jev_last_metrics": {
+        "backend": "transformers",
+        "prefill_strategy": "shared_prefix",
+        "prefix_tokens": 450,
+        "suffix_batch_sizes": [
+          16
+        ],
+        "engine_forwards": 2,
+        "branch_prompt_tokens": 10414,
+        "computed_prompt_tokens": 3682,
+        "logical_prefill_tokens": 3664,
+        "padded_suffix_tokens": 3232,
+        "branch_output_tokens": 0,
+        "scored_positions": 16,
+        "backend_seconds": 1.0776669170008972,
+        "compile_seconds": 0.04430545901414007,
+        "score_seconds": 1.0777362079825252
+      },
+      "input_tokens": {
+        "simple_jev": 3657,
+        "open_cricket": 2455
+      },
+      "answers": {
+        "simple_jev": [
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing"
+        ],
+        "open_cricket": [
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing",
+          "billing"
+        ]
+      }
+    }
+  ]
+}

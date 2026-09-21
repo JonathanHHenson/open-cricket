@@ -27,8 +27,9 @@ imported at use sites. Preserve that separation in public exports and extensions
 2. Acquire the per-client lock and prepare questions in insertion order.
 3. `classification_input` renders structured content and maps Choice to its
    labels, Score to numeric-string indices, and Noul to `true`/`false`.
-4. `classify` maps labels to case-sensitive alphanumeric codes, preferring
-   single-token characters (`A–Z`, `a–z`, then `0–9`) before longer codes.
+4. `classify` maps labels to case-insensitive alphanumeric codes, preferring
+   single-token characters (`A–Z`, then `0–9`) before longer codes. It combines
+   all tokenized case variants into the canonical candidate probability.
    Explicit `sequence` / `constrained` modes instead tokenize JSON-quoted labels
    followed by EOS.
 5. For multiple questions whose codes are all single-token, a capable backend shares their exact token

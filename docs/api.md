@@ -17,9 +17,10 @@ Model listing dates describe the adapter, not the checkpoint release.
 
 ## Request body
 
-Default local scoring prefers single-token answer codes and extends to longer
-codes as needed, with no fixed Choice candidate cap. Model context and memory
-limits still apply. For full label likelihoods, configure
+Default local scoring prefers single-token `A–Z` and `0–9` answer codes and extends
+to longer codes as needed. Letter case variants are combined into the same
+candidate probability. There is no fixed Choice candidate cap; model context and
+memory limits still apply. For full label likelihoods, configure
 `OPEN_CRICKET_MODE=sequence` on the server (or `LocalClient(mode="sequence")`).
 The local wire schema has no maximum Choice label count.
 

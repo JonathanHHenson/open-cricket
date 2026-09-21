@@ -225,7 +225,7 @@ Caches are isolated per classification and are not retained across requests.
 
 ### One-pass answer-code scoring
 
-The default `answer_codes` mode prefers single-token `A–Z`, `a–z`, then `0–9` codes,
+The default `answer_codes` mode prefers single-token `A–Z`, then `0–9` codes,
 then maps the probabilities back to the original labels:
 
 ```bash
@@ -239,9 +239,11 @@ client = LocalClient(runtime="mlx")
 The server, `classify`, and `as_runnable` also default to `answer_codes`;
 request/response bodies stay unchanged. An explicit `OPEN_CRICKET_MODE` overrides
 the server default.
-It supports Choice, Score, and Noul. After single-token alphanumerics run out,
-it uses remaining valid characters and longer codes (`AA`, `AB`, …). There is
-no fixed Choice candidate cap; model context and memory remain practical limits.
+It supports Choice, Score, and Noul. Letter codes are case-insensitive: the
+probability mass of outputs such as `A` and `a` is combined before candidates are
+normalized. After single-token alphanumerics run out, it uses longer codes (`AA`,
+`AB`, …) and combines all case variants. There is no fixed Choice candidate cap;
+model context and memory remain practical limits.
 
 When all codes are single tokens, one forward scores them without EOS. Otherwise,
 the cached trie scores complete codes including EOS, distinguishing `A` from `AA`. It

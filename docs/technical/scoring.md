@@ -57,19 +57,20 @@ Run `uv run open-cricket --demo --pretty`, then add `--mode constrained`.
 ## Local answer-code mode
 
 `classify(..., mode="answer_codes")` maps categories in input order to `A–Z`,
-`a–z`, then `0–9`, rendering each code with its original label and description.
-Codes are case-sensitive. Single-token alphanumerics take priority, followed by
-valid multi-token characters and longer codes (`AA`, `AB`, …, `AAA`, …).
+then `0–9`, rendering each code with its original label and description. Letter
+codes are case-insensitive. Single-token alphanumerics take priority, followed by
+longer codes (`AA`, `AB`, …, `AAA`, …).
 There is no fixed candidate cap. Invalid or colliding single-character codes are
 skipped; incompatible generated codes fail explicitly. Context and memory limits
 still apply.
 
-When all selected codes are single tokens, one uncached model forward supplies
-full-vocabulary-normalized probabilities for
-all code tokens. Only those first-token events are scored:
+When all selected code aliases are single tokens, one uncached model forward
+supplies full-vocabulary-normalized probabilities for all aliases. Uppercase and
+lowercase probability mass is combined per candidate before temperature and
+candidate normalization:
 
 ```text
-L(y) = log P(code(y) | code_prompt)
+L(y) = log sum_{a in case_aliases(code(y))} P(a | code_prompt)
 p(y) = softmax_y(L(y) / T)
 ```
 
@@ -81,13 +82,13 @@ Low-level results expose `mode="answer_codes"`, one scored node, and each row's
 `code`, single token ID, and trace. Candidate mass is the total first-code-token
 mass, so it is not comparable to label mode's completed-answer mass.
 
-When any selected code needs multiple tokens, every code includes the backend's
+When any selected alias needs multiple tokens, every alias includes the backend's
 terminal token in its scored path. This distinguishes overlapping codes such as
-`A` and `AA`. The cached trie scores joint code-plus-EOS likelihoods, normalizes
-them over candidates, and restores original labels. Longer codes need more model
+`A` and `AA`. The cached trie scores joint alias-plus-EOS likelihoods, combines all
+case variants per candidate, normalizes them, and restores original labels. Longer codes need more model
 work and can receive lower scores from length bias; adding candidates can also
 switch the scoring semantics of existing codes. Question batching applies only
-when every code in the request is single-token.
+when every case alias in the request is single-token.
 
 `examples/benchmark_answer_codes.py` compares speed, predictions, probabilities,
 and reversed candidate order on a small synthetic smoke dataset. It does not

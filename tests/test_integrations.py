@@ -18,7 +18,7 @@ class ToyBackend:
         return [99]
 
     def answer_ids(self, answer):
-        return [1 if answer in ('"billing"', 'A') else 2, 0]
+        return [1 if answer in ('"billing"', 'A', 'a') else 2, 0]
 
     def next_logprobs(self, prompt, prefix, allowed):
         probabilities = {1: 0.6, 2: 0.3} if not prefix else {0: 0.5}

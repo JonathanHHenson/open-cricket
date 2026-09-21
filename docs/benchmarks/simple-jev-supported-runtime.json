@@ -1,0 +1,106 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "device": "mps",
+  "dtype": "torch.float32",
+  "torch": "2.14.0",
+  "transformers": "5.17.0",
+  "repeats": 7,
+  "rows": [
+    {
+      "questions": 1,
+      "median_end_to_end_seconds": 0.16873345797648653,
+      "median_score_seconds": 0.16628633299842477,
+      "median_compile_seconds": 0.0023040830274112523,
+      "input_tokens": 478,
+      "metrics": {
+        "backend": "transformers",
+        "prefill_strategy": "shared_prefix",
+        "prefix_tokens": 477,
+        "suffix_batch_sizes": [
+          1
+        ],
+        "engine_forwards": 2,
+        "branch_prompt_tokens": 478,
+        "computed_prompt_tokens": 478,
+        "logical_prefill_tokens": 478,
+        "padded_suffix_tokens": 1,
+        "branch_output_tokens": 0,
+        "scored_positions": 1,
+        "backend_seconds": 0.16623245901428163
+      },
+      "answers": [
+        "billing"
+      ]
+    },
+    {
+      "questions": 4,
+      "median_end_to_end_seconds": 0.34712449996732175,
+      "median_score_seconds": 0.33763104100944474,
+      "median_compile_seconds": 0.009344791993498802,
+      "input_tokens": 1111,
+      "metrics": {
+        "backend": "transformers",
+        "prefill_strategy": "shared_prefix",
+        "prefix_tokens": 311,
+        "suffix_batch_sizes": [
+          4
+        ],
+        "engine_forwards": 2,
+        "branch_prompt_tokens": 2044,
+        "computed_prompt_tokens": 1111,
+        "logical_prefill_tokens": 1111,
+        "padded_suffix_tokens": 800,
+        "branch_output_tokens": 0,
+        "scored_positions": 4,
+        "backend_seconds": 0.33914037502836436
+      },
+      "answers": [
+        "billing",
+        "billing",
+        "billing",
+        "billing"
+      ]
+    },
+    {
+      "questions": 16,
+      "median_end_to_end_seconds": 1.1155544589855708,
+      "median_score_seconds": 1.0694705420173705,
+      "median_compile_seconds": 0.04495991696603596,
+      "input_tokens": 3657,
+      "metrics": {
+        "backend": "transformers",
+        "prefill_strategy": "shared_prefix",
+        "prefix_tokens": 450,
+        "suffix_batch_sizes": [
+          16
+        ],
+        "engine_forwards": 2,
+        "branch_prompt_tokens": 10414,
+        "computed_prompt_tokens": 3682,
+        "logical_prefill_tokens": 3664,
+        "padded_suffix_tokens": 3232,
+        "branch_output_tokens": 0,
+        "scored_positions": 16,
+        "backend_seconds": 1.0706896670162678
+      },
+      "answers": [
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing",
+        "billing"
+      ]
+    }
+  ]
+}
