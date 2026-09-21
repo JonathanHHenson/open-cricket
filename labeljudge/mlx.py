@@ -3,7 +3,7 @@ from .local import LocalBackend
 
 
 class MLXBackend(LocalBackend):
-    def __init__(self, model="Qwen/Qwen2.5-0.5B-Instruct", device="auto", revision=None):
+    def __init__(self, model="Qwen/Qwen2.5-1.5B-Instruct", device="auto", revision=None):
         if device not in {"auto", "mps"}:
             raise ValueError("MLX backend requires device auto or mps")
         import mlx.core as mx

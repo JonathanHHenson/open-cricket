@@ -6,63 +6,72 @@ Custom backend: create_app(any compatible classification Runnable).
 
 import hmac
 import os
+from uuid import uuid4
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Header, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi import Depends, FastAPI, Header, HTTPException, Request as HTTPRequest
 
-from .integrations import ProbabilityUnavailableError
-
-
-class Category(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    label: str = Field(min_length=1)
-    description: str = Field(min_length=1)
+from .systemone import ModelsResponse, SystemOneRequest, SystemOneResponse
 
 
-class Request(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    message: str
-    question: str = Field(min_length=1)
-    options: list[str | Category] = Field(min_length=1)
+def create_app(classifier=None, *, model_name=None):
+    served_model = model_name or (
+        os.getenv("LABELJUDGE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+        if classifier is None else "labeljudge-custom"
+    )
 
+    def authenticate(authorization: str | None = Header(default=None)):
+        secret = os.getenv("LABELJUDGE_API_KEY")
+        if secret and not hmac.compare_digest(
+            (authorization or "").encode("utf-8"), ("Bearer " + secret).encode("utf-8")
+        ):
+            raise HTTPException(status_code=401, detail="Invalid API key")
 
-def create_app(classifier=None):
     @asynccontextmanager
     async def lifespan(app):
         if classifier is None:
-            from .backend import load_backend
-            from .integrations import as_runnable
+            from .sdk import LocalClient
 
-            app.state.classifier = as_runnable(
-                load_backend(
-                    os.getenv("LABELJUDGE_BACKEND", "hf"),
-                    os.getenv("LABELJUDGE_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"),
-                    device=os.getenv("LABELJUDGE_DEVICE", "auto"),
-                    revision=os.getenv("LABELJUDGE_REVISION"),
-                )
-            )
+            app.state.classifier = LocalClient(
+                model=served_model, runtime=os.getenv("LABELJUDGE_BACKEND", "hf"),
+                device=os.getenv("LABELJUDGE_DEVICE", "auto"),
+                revision=os.getenv("LABELJUDGE_REVISION"))
         else:
             app.state.classifier = classifier
         yield
 
     app = FastAPI(title="LabelJudge", version="0.1.0", lifespan=lifespan)
 
+    @app.middleware("http")
+    async def request_metadata(request: HTTPRequest, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/v1/"):
+            response.headers["x-request-id"] = str(uuid4())
+            response.headers["x-labeljudge-confidence-method"] = "normalized-entropy"
+        return response
+
+    @app.get("/v1/models", response_model=ModelsResponse, dependencies=[Depends(authenticate)])
+    def models():
+        return {"models": [
+            {"name": name,
+             "description": f"LabelJudge local inference using {served_model}; structured decision API.",
+             "release_date": "2026-09-21"}
+            for name in (served_model,)
+        ]}
+
+    @app.post("/v1/systemone", response_model=SystemOneResponse,
+              dependencies=[Depends(authenticate)])
+    async def system_one(request: SystemOneRequest):
+        if request.model != served_model:
+            raise HTTPException(status_code=422, detail="Unknown model; see GET /v1/models")
+        try:
+            return await app.state.classifier.ainvoke(request.model_dump(mode="json"))
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
     @app.get("/health")
     def health():
         return {"status": "ready"}
-
-    @app.post("/classify")
-    async def classify_http(request: Request, authorization: str | None = Header(default=None)):
-        secret = os.getenv("LABELJUDGE_API_KEY")
-        if secret and not hmac.compare_digest(authorization or "", "Bearer " + secret):
-            raise HTTPException(status_code=401, detail="Invalid API key")
-        try:
-            return await app.state.classifier.ainvoke(request.model_dump())
-        except ProbabilityUnavailableError as error:
-            raise HTTPException(status_code=422, detail=str(error)) from error
-        except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error)) from error
 
     return app
 

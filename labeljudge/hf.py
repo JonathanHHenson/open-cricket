@@ -5,7 +5,7 @@ from .local import LocalBackend
 
 
 class HuggingFaceBackend(LocalBackend):
-    def __init__(self, model="Qwen/Qwen2.5-0.5B-Instruct", device="auto", revision=None):
+    def __init__(self, model="Qwen/Qwen2.5-1.5B-Instruct", device="auto", revision=None):
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
         self.torch = torch

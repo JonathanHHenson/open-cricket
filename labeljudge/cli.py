@@ -3,29 +3,34 @@ import json
 from time import perf_counter
 
 from .core import score_paths
-from .questionnaire import build_form, classify
+from .systemone import SystemOneRequest, confidence, render
 
 
-def format_pretty(result, input_message=None):
-    """Render the input, questions, selected answers, and option probabilities."""
-    results = result.get("results", [result])
+def format_pretty(result, input_message=None, questions=None):
+    """Render typed answers and their probability distributions."""
     sections = []
     if input_message is not None:
-        sections.append(f"Input: {input_message}")
-    for index, item in enumerate(results):
-        lines = []
-        identifier = item.get("id")
-        if identifier is not None or len(results) > 1:
-            lines.append(f"Result: {identifier if identifier is not None else index}")
-        if "question" in item:
-            lines.append(f"Question: {item['question']}")
-        lines.append(f"Answer: {item['answer']}")
-        lines.extend(("", "Options:"))
-        label_width = max(len(option["label"]) for option in item["options"])
-        lines.extend(
-            f"  {option['label']:<{label_width}}  {option['probability']:.2%}"
-            for option in item["options"]
-        )
+        sections.append(f"Input: {render(input_message)}")
+    for identifier, item in result["answers"].items():
+        lines = [
+            f"Question ID: {identifier}",
+            f"Question Type: {item['type']}",
+        ]
+        if questions and questions[identifier].instructions is not None:
+            lines.append(f"Question: {render(questions[identifier].instructions)}")
+        if item["type"] == "choice":
+            lines.append(f"Answer: {item['choice']}")
+        elif item["type"] == "score":
+            lines.append(f"Score: {item['score']:.3f}")
+        else:
+            lines.append(f"Yes probability: {item['noul']:.2%}")
+        if "confidence" in item:
+            lines.append(f"Confidence: {item['confidence']:.2%}")
+        if "probabilities" in item:
+            lines.extend(("", "Options:"))
+            probabilities = item["probabilities"]
+            width = max(map(len, probabilities))
+            lines.extend(f"  {label:<{width}}  {p:.2%}" for label, p in probabilities.items())
         sections.append("\n".join(lines))
     if "processing_time_seconds" in result:
         sections.append(f"Processing time: {result['processing_time_seconds']:.3f} seconds")
@@ -36,8 +41,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="Score questionnaire options using LLM token probabilities"
     )
-    parser.add_argument("--input", help="JSON file containing message and questions")
-    parser.add_argument("--model", default="Qwen/Qwen2.5-0.5B-Instruct")
+    parser.add_argument("--input", help="JSON file containing state, model, and typed questions")
+    parser.add_argument("--model", help="Override the model specified in the input JSON")
     parser.add_argument("--backend", default="hf", choices=["hf", "mlx"])
     parser.add_argument("--revision", help="Optional Hugging Face commit revision")
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda", "mps"])
@@ -56,6 +61,7 @@ def main():
     )
     args = parser.parse_args()
     input_message = None
+    questions = None
     request_started_at = 0.0
     if args.demo:
         import math
@@ -70,6 +76,13 @@ def main():
             mode=args.mode,
             temperature=args.temperature,
         )
+        probabilities = {row["label"]: row["probability"] for row in result["options"]}
+        result = {
+            "model": "synthetic-demo",
+            "answers": {"demo": {"type": "choice", "choice": result["answer"],
+                "probabilities": probabilities, "confidence": confidence(probabilities)}},
+            "usage": {"input_tokens": 0, "output_tokens": 0},
+        }
         result["demo_note"] = (
             "SYNTHETIC probabilities: demonstrates mathematics, not classification quality"
         )
@@ -78,38 +91,26 @@ def main():
             parser.error("--input is required unless --demo is supplied")
         with open(args.input, encoding="utf-8") as f:
             payload = json.load(f)
-        input_message = payload.get("message")
-        questions = payload.get("questions")
-        if not isinstance(questions, list) or not questions:
-            parser.error("input must contain a nonempty questions list")
-        for q in questions:
-            build_form(payload["message"], q["question"], q["options"])
-        from .backend import load_backend
+        from pydantic import ValidationError
+        from .sdk import LocalClient
 
-        backend = load_backend(args.backend, args.model, args.device, args.revision)
+        try:
+            request = SystemOneRequest.model_validate(payload)
+        except ValidationError as error:
+            parser.error(f"Expected state/model/questions request: {error}")
+        if args.model:
+            request.model = args.model
+        input_message, questions = request.state, request.questions
+        client = LocalClient(model=request.model, runtime=args.backend, device=args.device,
+                             revision=args.revision, mode=args.mode, temperature=args.temperature)
         if args.time:
             request_started_at = perf_counter()
-        result = {
-            "model": args.model,
-            "results": [
-                {
-                    "id": q.get("id", str(i)),
-                    **classify(
-                        backend,
-                        payload["message"],
-                        q["question"],
-                        q["options"],
-                        mode=args.mode,
-                        temperature=args.temperature,
-                    ),
-                }
-                for i, q in enumerate(questions)
-            ],
-        }
+        result = client.invoke(request.model_dump(mode="json"))
+
     if args.time:
         result["processing_time_seconds"] = round(perf_counter() - request_started_at, 6)
     if args.pretty:
-        print(format_pretty(result, input_message))
+        print(format_pretty(result, input_message, questions))
     else:
         print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
 

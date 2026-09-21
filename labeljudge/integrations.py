@@ -2,42 +2,24 @@
 
 import json
 import math
-import threading
 
 from .core import logsumexp
-from .questionnaire import build_form, classify, normalize_options
+from .questionnaire import build_form, normalize_options
 
 
 class ProbabilityUnavailableError(ValueError):
     """Provider omitted probabilities needed for an honest comparison."""
 
 
-def as_runnable(backend, *, mode="sequence", temperature=1.0):
-    """LCEL-compatible Runnable: invoke, ainvoke, batch, abatch and pipe.
-
-    backend supplies prompt_ids, answer_ids, next_logprobs (see hf.py).
-    A lock serialises access to this shared model instance, including batch.
-    Async calls use LangChain's thread executor rather than native GPU batching.
-    """
+def as_runnable(backend, *, model="Qwen/Qwen2.5-1.5B-Instruct", mode="sequence", temperature=1.0):
+    """Runnable consuming state/model/questions and returning typed answers."""
     from langchain_core.runnables import RunnableLambda
-
-    lock = threading.Lock()
-
-    def run(value):
-        with lock:
-            return classify(
-                backend,
-                value["message"],
-                value["question"],
-                value["options"],
-                mode=mode,
-                temperature=temperature,
-            )
-
-    return RunnableLambda(run, name="labeljudge_exact")
+    from .sdk import LocalClient
+    client = LocalClient(model=model, backend=backend, mode=mode, temperature=temperature)
+    return RunnableLambda(client.invoke, afunc=client.ainvoke, name="labeljudge_exact")
 
 
-def chat_runnable(model, *, top_logprobs=20, temperature=1.0, bind_kwargs=None):
+def chat_runnable(model, *, model_name="Qwen/Qwen2.5-1.5B-Instruct", top_logprobs=20, temperature=1.0, bind_kwargs=None):
     """Single-token answer-code path for compatible LangChain chat models.
 
     Each label is mapped to A..Z. Requires original first-token probabilities
@@ -138,21 +120,42 @@ def chat_runnable(model, *, top_logprobs=20, temperature=1.0, bind_kwargs=None):
     async def arun(value, config: RunnableConfig):
         return parse(await bound.ainvoke(messages(value), config=config), value)
 
-    return RunnableLambda(run, afunc=arun, name="labeljudge_chat_codes")
+    raw = RunnableLambda(run, afunc=arun, name="labeljudge_chat_codes")
+    from .systemone import SystemOneRequest, classification_input, format_response
+
+    def request_for(value):
+        request = SystemOneRequest.model_validate(value)
+        if request.model != model_name:
+            raise ValueError(f"Unknown model; this runnable serves {model_name}")
+        return request
+
+    def system_run(value, config: RunnableConfig):
+        request = request_for(value)
+        results = [raw.invoke(classification_input(request.state, question), config=config)
+                   for question in request.questions.values()]
+        return format_response(request, model_name, results).model_dump(mode="json")
+
+    async def system_arun(value, config: RunnableConfig):
+        request = request_for(value)
+        results = [await raw.ainvoke(classification_input(request.state, question), config=config)
+                   for question in request.questions.values()]
+        return format_response(request, model_name, results).model_dump(mode="json")
+
+    return RunnableLambda(system_run, afunc=system_arun, name="labeljudge_chat")
 
 
 def graph_node(runnable, *, output_key="classification"):
     """Graph node returns a partial state update; preserves unrelated state.
 
-    State must include message/question/options. Conditional edges can inspect
-    state[output_key]['answer']. Callable through invoke and ainvoke.
+    State must include state/model/questions. Conditional edges can inspect
+    state[output_key]['answers']. Callable through invoke and ainvoke.
     """
     from langchain_core.runnables import RunnableConfig, RunnableLambda
 
     def run(state, config: RunnableConfig):
-        return {output_key: runnable.invoke(state, config=config)}
+        return {output_key: runnable.invoke({key: state[key] for key in ("state", "model", "questions")}, config=config)}
 
     async def arun(state, config: RunnableConfig):
-        return {output_key: await runnable.ainvoke(state, config=config)}
+        return {output_key: await runnable.ainvoke({key: state[key] for key in ("state", "model", "questions")}, config=config)}
 
     return RunnableLambda(run, afunc=arun, name="labeljudge_graph_node")

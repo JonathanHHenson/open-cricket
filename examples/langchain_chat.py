@@ -7,8 +7,9 @@ import os
 from langchain_openai import ChatOpenAI
 from labeljudge.integrations import chat_runnable
 
-classifier = chat_runnable(ChatOpenAI(model=os.environ["MODEL_NAME"]))
+model_name = os.environ["MODEL_NAME"]
+classifier = chat_runnable(ChatOpenAI(model=model_name), model_name=model_name)
 if __name__ == "__main__":
-    print(classifier.invoke({"message": "I was charged twice.",
-                             "question": "Which team should handle this?",
-                             "options": ["billing", "technical support", "other"]}))
+    print(classifier.invoke({"state": "I was charged twice.", "model": model_name,
+                            "questions": {"route": {"type": "choice", "instructions": "Which team?",
+                                "criteria": {"billing": None, "technical support": None, "other": None}}}}))

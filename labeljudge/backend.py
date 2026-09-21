@@ -23,7 +23,7 @@ class TokenBackend(Protocol):
         ...
 
 
-def load_backend(backend="hf", model="Qwen/Qwen2.5-0.5B-Instruct", device="auto", revision=None):
+def load_backend(backend="hf", model="Qwen/Qwen2.5-1.5B-Instruct", device="auto", revision=None):
     """Load the selected runtime without importing unselected optional dependencies."""
     if backend == "hf":
         from .hf import HuggingFaceBackend

@@ -14,26 +14,20 @@ class CliTests(unittest.TestCase):
         result = {
             "model": "test-model",
             "processing_time_seconds": 1.23456,
-            "results": [
-                {
-                    "id": "route",
-                    "answer": "billing",
-                    "question": "Which team?",
-                    "prompt_tokens": 42,
-                    "options": [
-                        {"label": "billing", "probability": 0.75, "score": -1.0},
-                        {"label": "other", "probability": 0.25, "score": -2.0},
-                    ],
-                }
-            ],
+            "answers": {"route": {"type": "choice", "choice": "billing", "confidence": .18872,
+                                  "probabilities": {"billing": .75, "other": .25}}},
         }
 
+        from labeljudge import Choice
         self.assertEqual(
-            format_pretty(result, "I was charged twice."),
+            format_pretty(result, "I was charged twice.",
+                          {"route": Choice(instructions="Which team?", criteria={"billing": None, "other": None})}),
             "Input: I was charged twice.\n\n"
-            "Result: route\n"
+            "Question ID: route\n"
+            "Question Type: choice\n"
             "Question: Which team?\n"
-            "Answer: billing\n\n"
+            "Answer: billing\n"
+            "Confidence: 18.87%\n\n"
             "Options:\n"
             "  billing  75.00%\n"
             "  other    25.00%\n\n"
@@ -91,13 +85,9 @@ class CliTests(unittest.TestCase):
             return next(times)
 
         payload = {
-            "message": "charged twice",
-            "questions": [
-                {
-                    "question": "Which team?",
-                    "options": ["billing", "other"],
-                }
-            ],
+            "state": "charged twice", "model": "Qwen/Qwen2.5-1.5B-Instruct",
+            "questions": {"route": {"type": "choice", "instructions": "Which team?",
+                                     "criteria": {"billing": None, "other": None}}},
         }
         output = io.StringIO()
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as input_file:

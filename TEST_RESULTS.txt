@@ -1,3 +1,11 @@
+test_mlx_factory_is_lazy_and_forwards_configuration (test_cli.BackendSelectionTests.test_mlx_factory_is_lazy_and_forwards_configuration) ... ok
+test_demo_accepts_pretty_and_time_flags (test_cli.CliTests.test_demo_accepts_pretty_and_time_flags) ... ok
+test_format_pretty_shows_input_questions_answers_and_probabilities (test_cli.CliTests.test_format_pretty_shows_input_questions_answers_and_probabilities) ... ok
+test_request_timer_starts_after_model_initialization (test_cli.CliTests.test_request_timer_starts_after_model_initialization) ... ok
+test_time_is_included_in_json_output (test_cli.CliTests.test_time_is_included_in_json_output) ... ok
+test_rejects_legacy_payload_without_network (test_client.ClientTests.test_rejects_legacy_payload_without_network) ... ok
+test_system_one_requests (test_client.ClientTests.test_system_one_requests) ... ok
+test_category_descriptions_are_prompt_context_not_answer_labels (test_core.CoreTests.test_category_descriptions_are_prompt_context_not_answer_labels) ... ok
 test_form_validation_and_escaping (test_core.CoreTests.test_form_validation_and_escaping) ... ok
 test_invalid_paths_and_missing_probabilities (test_core.CoreTests.test_invalid_paths_and_missing_probabilities) ... ok
 test_local_constraint_changes_distribution (test_core.CoreTests.test_local_constraint_changes_distribution) ... ok
@@ -8,17 +16,30 @@ test_chat_codes_probabilities_and_config (test_integrations.IntegrationTests.tes
 test_invoke_batch_async_and_lcel (test_integrations.IntegrationTests.test_invoke_batch_async_and_lcel) ... ok
 test_missing_top_k_is_not_zero (test_integrations.IntegrationTests.test_missing_top_k_is_not_zero) ... ok
 test_real_langgraph_state_and_conditional_routing (test_integrations.IntegrationTests.test_real_langgraph_state_and_conditional_routing) ... ok
-test_http_contract_validation_auth_and_runnable (test_server.ServerTests.test_http_contract_validation_auth_and_runnable) ... /root/.local/lib/python3.12/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
-  _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
-ok
+test_branch_rollback_matches_uncached_in_both_modes (test_local.CacheTests.test_branch_rollback_matches_uncached_in_both_modes) ... ok
+test_limit_and_nonfinite_validation (test_local.CacheTests.test_limit_and_nonfinite_validation) ... ok
+test_sessions_are_isolated_and_allow_repeated_or_ancestor_prefixes (test_local.CacheTests.test_sessions_are_isolated_and_allow_repeated_or_ancestor_prefixes) ... ok
+test_untrimmable_cache_falls_back (test_local.CacheTests.test_untrimmable_cache_falls_back) ... ok
+test_real_transformer_cache_and_final_logits_match_full_forward (test_local.HuggingFaceCacheTests.test_real_transformer_cache_and_final_logits_match_full_forward) ... skipped 'optional HF dependencies not installed'
+test_real_mlx_cache_matches_full_forward (test_local.MLXCacheTests.test_real_mlx_cache_matches_full_forward) ... skipped 'MLX runtime unavailable: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.'
+test_cli_explicit_model_override_loads_and_reports_selected_model (test_sdk.SdkTests.test_cli_explicit_model_override_loads_and_reports_selected_model) ... ok
+test_examples_share_cli_local_and_http_contract (test_sdk.SdkTests.test_examples_share_cli_local_and_http_contract) ... ok
+test_invalid_shape_rejected_across_clients_and_cli (test_sdk.SdkTests.test_invalid_shape_rejected_across_clients_and_cli) ... ok
+test_typed_direct_call_and_pretty_mixed_answers (test_sdk.SdkTests.test_typed_direct_call_and_pretty_mixed_answers) ... ok
+test_public_routes_and_request_validation (test_server.ServerTests.test_public_routes_and_request_validation) ... ok
+test_auth_models_aliases_and_request_ids (test_systemone.SystemOneTests.test_auth_models_aliases_and_request_ids) ... ok
+test_backend_errors_and_missing_usage (test_systemone.SystemOneTests.test_backend_errors_and_missing_usage) ... ok
+test_documented_limits (test_systemone.SystemOneTests.test_documented_limits) ... ok
+test_mixed_request_response_and_structured_content (test_systemone.SystemOneTests.test_mixed_request_response_and_structured_content) ... ok
+test_normalized_entropy_boundaries (test_systemone.SystemOneTests.test_normalized_entropy_boundaries) ... ok
+test_official_async_sdk_and_environment_configuration (test_systemone.SystemOneTests.test_official_async_sdk_and_environment_configuration) ... ok
+test_official_sdk_round_trip (test_systemone.SystemOneTests.test_official_sdk_round_trip) ... ok
+test_optional_instructions_and_noul_criteria (test_systemone.SystemOneTests.test_optional_instructions_and_noul_criteria) ... ok
+test_question_names_and_siblings_do_not_change_inference_input (test_systemone.SystemOneTests.test_question_names_and_siblings_do_not_change_inference_input) ... ok
+test_questionnaire_backend (test_systemone.SystemOneTests.test_questionnaire_backend) ... ok
+test_validation_before_inference (test_systemone.SystemOneTests.test_validation_before_inference) ... ok
 
 ----------------------------------------------------------------------
-Ran 11 tests in 1.539s
+Ran 40 tests in 0.290s
 
-OK
-
-Framework versions tested:
-langchain-core==1.6.3
-langgraph==1.2.11
-fastapi==0.141.1
-httpx==0.28.1
+OK (skipped=2)

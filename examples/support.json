@@ -1,45 +1,24 @@
 {
-  "message": "I was charged twice for my subscription yesterday. Please refund the extra payment; I still want to keep my account.",
-  "questions": [
-    {
-      "id": "route",
-      "question": "Which team should handle this message?",
-      "options": [
-        {
-          "label": "billing",
-          "description": "Charges, payments, invoices, subscriptions, and refunds"
-        },
-        {
-          "label": "technical support",
-          "description": "Product errors, outages, setup problems, and troubleshooting"
-        },
-        {
-          "label": "account cancellation",
-          "description": "Requests to close, cancel, or permanently delete an account"
-        },
-        {
-          "label": "other",
-          "description": "Only when none of the other categories applies"
-        }
-      ]
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "state": "I was charged twice for my subscription. Please fix this today.",
+  "questions": {
+    "department": {
+      "type": "choice",
+      "instructions": "Which team should handle this?",
+      "criteria": {
+        "billing": "Payments, invoices, and refunds",
+        "technical": "Bugs and integration problems",
+        "other": null
+      }
     },
-    {
-      "id": "refund",
-      "question": "Is the customer requesting a refund?",
-      "options": [
-        "yes",
-        "no",
-        "unclear"
-      ]
+    "urgency": {
+      "type": "score",
+      "instructions": "How urgently does the sender need a response?",
+      "criteria": ["Can wait", "Within a few days", "Today"]
     },
-    {
-      "id": "sentiment",
-      "question": "What sentiment is expressed?",
-      "options": [
-        "positive",
-        "neutral",
-        "negative"
-      ]
+    "refund": {
+      "type": "noul",
+      "instructions": "Does the message concern an incorrect charge?"
     }
-  ]
+  }
 }

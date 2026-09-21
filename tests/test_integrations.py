@@ -25,14 +25,11 @@ class ToyBackend:
         return {t: math.log(probabilities[t]) for t in allowed}
 
 
-VALUE = {"message": "charged twice", "question": "Which team?", "options": ["billing", "other"]}
-DESCRIBED_VALUE = {
-    **VALUE,
-    "options": [
-        {"label": "billing", "description": "Charges, payments, and refunds"},
-        {"label": "other", "description": "Only when no category applies"},
-    ],
-}
+VALUE = {"state": "charged twice", "model": "Qwen/Qwen2.5-1.5B-Instruct",
+         "questions": {"route": {"type": "choice", "instructions": "Which team?",
+                                 "criteria": {"billing": None, "other": None}}}}
+DESCRIBED_VALUE = {**VALUE, "questions": {"route": {"type": "choice", "instructions": "Which team?",
+    "criteria": {"billing": "Charges, payments, and refunds", "other": "Only when no category applies"}}}}
 
 
 class FakeChat:
@@ -62,27 +59,27 @@ class FakeChat:
 class IntegrationTests(unittest.TestCase):
     def test_invoke_batch_async_and_lcel(self):
         classifier = as_runnable(ToyBackend())
-        self.assertEqual(classifier.invoke(VALUE)["answer"], "billing")
+        self.assertEqual(classifier.invoke(VALUE)["answers"]["route"]["choice"], "billing")
         self.assertEqual(len(classifier.batch([VALUE, VALUE])), 2)
-        self.assertEqual(asyncio.run(classifier.ainvoke(VALUE))["answer"], "billing")
+        self.assertEqual(asyncio.run(classifier.ainvoke(VALUE))["answers"]["route"]["choice"], "billing")
         self.assertEqual(len(asyncio.run(classifier.abatch([VALUE, VALUE]))), 2)
-        self.assertEqual(classifier.invoke(DESCRIBED_VALUE)["answer"], "billing")
-        chain = classifier | (lambda r: r["answer"])
+        self.assertEqual(classifier.invoke(DESCRIBED_VALUE)["answers"]["route"]["choice"], "billing")
+        chain = classifier | (lambda r: r["answers"]["route"]["choice"])
         self.assertEqual(chain.invoke(VALUE), "billing")
 
     def test_chat_codes_probabilities_and_config(self):
         model = FakeChat()
         classifier = chat_runnable(model)
         r = classifier.invoke(VALUE, config={"tags": ["test"], "metadata": {"request": 1}})
-        self.assertAlmostEqual(r["options"][0]["probability"], 2 / 3)
+        self.assertAlmostEqual(r["answers"]["route"]["probabilities"]["billing"], 2 / 3)
         self.assertEqual(model.kwargs["max_tokens"], 1)
         self.assertEqual(model.config["metadata"]["request"], 1)
         self.assertIn('A = "billing"', model.messages[1].content)
         described = classifier.invoke(DESCRIBED_VALUE)
-        self.assertEqual(described["answer"], "billing")
-        self.assertEqual(described["options"][0]["label"], "billing")
+        self.assertEqual(described["answers"]["route"]["choice"], "billing")
+        self.assertEqual(described["answers"]["route"]["choice"], "billing")
         self.assertIn("Charges, payments, and refunds", model.messages[1].content)
-        self.assertEqual(asyncio.run(classifier.ainvoke(VALUE))["answer"], "billing")
+        self.assertEqual(asyncio.run(classifier.ainvoke(VALUE))["answers"]["route"]["choice"], "billing")
 
     def test_missing_top_k_is_not_zero(self):
         with self.assertRaises(ProbabilityUnavailableError):
@@ -93,9 +90,9 @@ class IntegrationTests(unittest.TestCase):
         from langgraph.graph import END, START, StateGraph
 
         class State(TypedDict, total=False):
-            message: str
-            question: str
-            options: list[str | dict[str, str]]
+            state: str
+            model: str
+            questions: dict
             classification: dict
             marker: str
             routed: str
@@ -107,7 +104,7 @@ class IntegrationTests(unittest.TestCase):
         g.add_edge(START, "judge")
         g.add_conditional_edges(
             "judge",
-            lambda state: state["classification"]["answer"],
+            lambda state: state["classification"]["answers"]["route"]["choice"],
             {"billing": "billing", "other": "other"},
         )
         g.add_edge("billing", END)

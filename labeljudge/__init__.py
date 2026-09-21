@@ -1,4 +1,6 @@
 from .core import score_paths
-from .questionnaire import classify, build_form
+from .sdk import LocalClient
+from .client import Client
+from .systemone import Choice, Score, Noul
 
-__all__ = ["score_paths", "classify", "build_form"]
+__all__ = ["score_paths", "LocalClient", "Client", "Choice", "Score", "Noul"]
