@@ -1,8 +1,8 @@
 """Cache regression tests run without model downloads or optional runtimes."""
 import unittest
 
-from labeljudge.core import score_paths
-from labeljudge.local import LocalBackend
+from open_cricket.core import score_paths
+from open_cricket.local import LocalBackend
 
 
 class ToyBackend(LocalBackend):
@@ -81,7 +81,7 @@ except ImportError:
 @unittest.skipIf(torch is None, 'optional HF dependencies not installed')
 class HuggingFaceCacheTests(unittest.TestCase):
     def test_real_transformer_cache_and_final_logits_match_full_forward(self):
-        from labeljudge.hf import HuggingFaceBackend
+        from open_cricket.hf import HuggingFaceBackend
         torch.manual_seed(42)
         backend = HuggingFaceBackend.__new__(HuggingFaceBackend)
         backend.torch, backend.device, backend.limit = torch, 'cpu', 128
@@ -108,7 +108,7 @@ class MLXCacheTests(unittest.TestCase):
             from mlx_lm.models.qwen2 import Model, ModelArgs
         except ImportError as error:
             self.skipTest(f'MLX runtime unavailable: {error}')
-        from labeljudge.mlx import MLXBackend
+        from open_cricket.mlx import MLXBackend
         mx.random.seed(42)
         backend = MLXBackend.__new__(MLXBackend)
         backend.mx, backend.limit = mx, 128

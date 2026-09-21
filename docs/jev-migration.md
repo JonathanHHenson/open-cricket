@@ -1,30 +1,30 @@
-# Switch from Jev to LabelJudge
+# Switch from Jev to Open Cricket
 
-LabelJudge serves the TypeSafe/Jev HTTP request and response format at
+Open Cricket serves the TypeSafe/Jev HTTP request and response format at
 `POST /v1/systemone`, plus `GET /v1/models`. The REST call shapes and `system_one(state, questions)` SDK pattern follow Jev.
-Use LabelJudge names and your local checkpoint; no Jev model aliases are provided.
+Use Open Cricket names and your local checkpoint; no Jev model aliases are provided.
 
 ## Start the server
 
 ```bash
 uv sync --extra hf --extra server
-export LABELJUDGE_API_KEY="choose-a-local-server-key"
-uv run uvicorn labeljudge.server:app --host 127.0.0.1 --port 8000
+export OPEN_CRICKET_API_KEY="choose-a-local-server-key"
+uv run uvicorn open_cricket.server:app --host 127.0.0.1 --port 8000
 ```
 
 For Apple silicon MLX, use `--extra mlx` instead of `--extra hf` and set
-`LABELJUDGE_BACKEND=mlx`. `LABELJUDGE_MODEL`, `LABELJUDGE_DEVICE`, and
-`LABELJUDGE_REVISION` select the local checkpoint, device, and revision at startup.
+`OPEN_CRICKET_BACKEND=mlx`. `OPEN_CRICKET_MODEL`, `OPEN_CRICKET_DEVICE`, and
+`OPEN_CRICKET_REVISION` select the local checkpoint, device, and revision at startup.
 
-If `LABELJUDGE_API_KEY` is unset, authentication is disabled for local use.
+If `OPEN_CRICKET_API_KEY` is unset, authentication is disabled for local use.
 The TypeSafe SDK still requires a key; any nonempty placeholder works in that case.
 When authentication is enabled, the client's bearer key must match the server's
-`LABELJUDGE_API_KEY`. No TypeSafe account or hosted inference is needed.
+`OPEN_CRICKET_API_KEY`. No TypeSafe account or hosted inference is needed.
 
 ## Direct local Python SDK
 
 ```python
-from labeljudge import LocalClient, Choice
+from open_cricket import LocalClient, Choice
 
 client = LocalClient(model="Qwen/Qwen2.5-1.5B-Instruct")
 result = client.system_one(
@@ -39,10 +39,10 @@ The CLI and both SDKs accept the same `state` / `model` / `questions` payload vi
 
 ## HTTP Python SDK
 
-LabelJudge's HTTP client also supports this shape:
+Open Cricket's HTTP client also supports this shape:
 
 ```python
-from labeljudge.client import Client
+from open_cricket.client import Client
 
 client = Client("http://127.0.0.1:8000", api_key="choose-a-local-server-key")
 result = client.system_one(
@@ -93,11 +93,11 @@ with TypeSafeClient(
 ```
 
 The server is tested with `typesafe-sdk==0.7.0`. For other HTTP clients, change the
-host to your LabelJudge server and use the same JSON body and bearer header:
+host to your Open Cricket server and use the same JSON body and bearer header:
 
 ```bash
 curl http://127.0.0.1:8000/v1/systemone \
-  -H "Authorization: Bearer $LABELJUDGE_API_KEY" \
+  -H "Authorization: Bearer $OPEN_CRICKET_API_KEY" \
   -H "Content-Type: application/json" \
   --data-binary @examples/support.json
 ```
@@ -122,11 +122,11 @@ Malformed requests return 422 with field details. Missing or incorrect configure
 bearer credentials return 401. `/docs` exposes the server's OpenAPI interface.
 
 Use `"model": "Qwen/Qwen2.5-1.5B-Instruct"`, the default local checkpoint.
-If you configure `LABELJUDGE_MODEL`, use that exact name in SDK and REST requests;
+If you configure `OPEN_CRICKET_MODEL`, use that exact name in SDK and REST requests;
 `/v1/models` lists the configured name. The response identifies this same model.
-Generic `labeljudge` and Jev-branded aliases are rejected with 422. Requests do
+Generic `open_cricket` and Jev-branded aliases are rejected with 422. Requests do
 not download or switch checkpoints; choose the checkpoint at server startup.
-Injected classifiers default to `labeljudge-custom` unless
+Injected classifiers default to `open-cricket-custom` unless
 `create_app(..., model_name=...)` supplies a name. Model listing dates refer to
 the API adapter, not the checkpoint's release.
 
@@ -134,14 +134,14 @@ the API adapter, not the checkpoint's release.
 
 This is API compatibility, not equivalent model predictions or calibration.
 
-- Choice probabilities come from LabelJudge's existing exhaustive answer scoring.
+- Choice probabilities come from Open Cricket's existing exhaustive answer scoring.
   Score uses the probability-weighted mean of zero-based rubric indices. Noul
   scores `true` and `false` and returns the relative probability of `true`.
 - `confidence` is **1 − normalized Shannon entropy** of the probabilities
   (single-option confidence is 1). This measures concentration, not calibrated
   correctness. TypeSafe's public docs do not specify its exact confidence formula.
   Retest any thresholds used to automate decisions. Responses identify our method
-  in `x-labeljudge-confidence-method: normalized-entropy`.
+  in `x-open-cricket-confidence-method: normalized-entropy`.
 - Local inference evaluates questions separately and sequentially; it does not
   reproduce Jev's parallel sampler. Context limits come from your local checkpoint.
 - `usage.input_tokens` sums each question's prompt length once, including repeated

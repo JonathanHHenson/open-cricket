@@ -10,8 +10,8 @@ import json
 import statistics
 from time import perf_counter
 
-from labeljudge import LocalClient
-from labeljudge.backend import load_backend
+from open_cricket import LocalClient
+from open_cricket.backend import load_backend
 
 
 def main():

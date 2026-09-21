@@ -1,8 +1,8 @@
 import math
 import unittest
 
-from labeljudge.core import score_paths
-from labeljudge.questionnaire import build_form, classify
+from open_cricket.core import score_paths
+from open_cricket.questionnaire import build_form, classify
 
 
 class CoreTests(unittest.TestCase):

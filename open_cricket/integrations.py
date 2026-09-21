@@ -18,7 +18,7 @@ def as_runnable(backend, *, model="Qwen/Qwen2.5-1.5B-Instruct", mode="sequence",
     from .sdk import LocalClient
 
     client = LocalClient(model=model, backend=backend, mode=mode, temperature=temperature)
-    return RunnableLambda(client.invoke, afunc=client.ainvoke, name="labeljudge_exact")
+    return RunnableLambda(client.invoke, afunc=client.ainvoke, name="open_cricket_exact")
 
 
 def chat_runnable(
@@ -129,7 +129,7 @@ def chat_runnable(
     async def arun(value, config: RunnableConfig):
         return parse(await bound.ainvoke(messages(value), config=config), value)
 
-    raw = RunnableLambda(run, afunc=arun, name="labeljudge_chat_codes")
+    raw = RunnableLambda(run, afunc=arun, name="open_cricket_chat_codes")
     from .systemone import SystemOneRequest, classification_input, format_response
 
     def request_for(value):
@@ -154,7 +154,7 @@ def chat_runnable(
         ]
         return format_response(request, model_name, results).model_dump(mode="json")
 
-    return RunnableLambda(system_run, afunc=system_arun, name="labeljudge_chat")
+    return RunnableLambda(system_run, afunc=system_arun, name="open_cricket_chat")
 
 
 def graph_node(runnable, *, output_key="classification"):
@@ -179,4 +179,4 @@ def graph_node(runnable, *, output_key="classification"):
             )
         }
 
-    return RunnableLambda(run, afunc=arun, name="labeljudge_graph_node")
+    return RunnableLambda(run, afunc=arun, name="open_cricket_graph_node")

@@ -4,8 +4,8 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from labeljudge.hf import HuggingFaceBackend
-from labeljudge.integrations import as_runnable, graph_node
+from open_cricket.hf import HuggingFaceBackend
+from open_cricket.integrations import as_runnable, graph_node
 
 
 class State(TypedDict, total=False):

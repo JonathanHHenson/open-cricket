@@ -20,7 +20,7 @@ class Classifier:
                             for label, weight in zip(labels, weights)], 'prompt_tokens': 17}
 
     async def ainvoke(self, value):
-        from labeljudge.systemone import SystemOneRequest, classification_input, format_response
+        from open_cricket.systemone import SystemOneRequest, classification_input, format_response
         request = SystemOneRequest.model_validate(value)
         results = [await self.score(classification_input(request.state, question))
                    for question in request.questions.values()]
@@ -42,9 +42,9 @@ def payload():
 class SystemOneTests(unittest.TestCase):
     def setUp(self):
         from fastapi.testclient import TestClient
-        from labeljudge.server import create_app
+        from open_cricket.server import create_app
         self.classifier = Classifier()
-        self.environment = patch.dict(os.environ, {'LABELJUDGE_API_KEY': 'local-test'})
+        self.environment = patch.dict(os.environ, {'OPEN_CRICKET_API_KEY': 'local-test'})
         self.environment.start()
         self.addCleanup(self.environment.stop)
         self.client = TestClient(create_app(self.classifier, model_name='local-checkpoint'))
@@ -70,7 +70,7 @@ class SystemOneTests(unittest.TestCase):
         self.assertEqual(answers['urgency']['legend']['1'], {'deadline': 'today'})
         self.assertEqual(answers['billing'], {'type': 'noul', 'noul': 1/3})
         self.assertTrue(response.headers['x-request-id'])
-        self.assertEqual(response.headers['x-labeljudge-confidence-method'], 'normalized-entropy')
+        self.assertEqual(response.headers['x-open-cricket-confidence-method'], 'normalized-entropy')
         self.assertEqual(json.loads(self.classifier.calls[0]['message']), payload()['state'])
         self.assertEqual(json.loads(self.classifier.calls[0]['question']), {'task': 'Choose a department'})
         description = self.classifier.calls[0]['options'][0]['description']
@@ -86,7 +86,7 @@ class SystemOneTests(unittest.TestCase):
         self.assertIn('local-checkpoint', names)
         self.assertFalse(any('jev' in name for name in names))
         self.assertNotIn('x-typesafe-request-id', models.headers)
-        for name in ('labeljudge', 'jev-latest', 'jev-preview', 'jev', 'jev-1.13.0'):
+        for name in ('open_cricket', 'jev-latest', 'jev-preview', 'jev', 'jev-1.13.0'):
             self.assertEqual(self.post({**payload(), 'model': name}).status_code, 422)
         for name in names:
             result = self.post({**payload(), 'model': name})
@@ -131,15 +131,15 @@ class SystemOneTests(unittest.TestCase):
         self.assertEqual(answers['c'], answers['d'])
 
     def test_normalized_entropy_boundaries(self):
-        from labeljudge.systemone import confidence
+        from open_cricket.systemone import confidence
         self.assertEqual(confidence({'a': .5, 'b': .5}), 0.0)
         self.assertEqual(confidence({'a': 1, 'b': 0}), 1.0)
         self.assertTrue(0 < confidence({'a': .8, 'b': .2}) < 1)
 
     def test_questionnaire_backend(self):
         from fastapi.testclient import TestClient
-        from labeljudge.integrations import as_runnable
-        from labeljudge.server import create_app
+        from open_cricket.integrations import as_runnable
+        from open_cricket.server import create_app
 
         class Tokens:
             def prompt_ids(self, system, form):

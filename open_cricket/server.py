@@ -1,6 +1,6 @@
-"""Optional HTTP service. Run: uvicorn labeljudge.server:app --host 127.0.0.1
+"""Optional HTTP service. Run: uvicorn open_cricket.server:app --host 127.0.0.1
 
-Default backend: local HF model specified by LABELJUDGE_MODEL.
+Default backend: local HF model specified by OPEN_CRICKET_MODEL.
 Custom backend: create_app(any compatible classification Runnable).
 """
 
@@ -17,13 +17,13 @@ from .systemone import ModelsResponse, SystemOneRequest, SystemOneResponse
 
 def create_app(classifier=None, *, model_name=None):
     served_model = model_name or (
-        os.getenv("LABELJUDGE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+        os.getenv("OPEN_CRICKET_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
         if classifier is None
-        else "labeljudge-custom"
+        else "open-cricket-custom"
     )
 
     def authenticate(authorization: str | None = Header(default=None)):
-        secret = os.getenv("LABELJUDGE_API_KEY")
+        secret = os.getenv("OPEN_CRICKET_API_KEY")
         if secret and not hmac.compare_digest(
             (authorization or "").encode("utf-8"), ("Bearer " + secret).encode("utf-8")
         ):
@@ -36,22 +36,22 @@ def create_app(classifier=None, *, model_name=None):
 
             app.state.classifier = LocalClient(
                 model=served_model,
-                runtime=os.getenv("LABELJUDGE_BACKEND", "hf"),
-                device=os.getenv("LABELJUDGE_DEVICE", "auto"),
-                revision=os.getenv("LABELJUDGE_REVISION"),
+                runtime=os.getenv("OPEN_CRICKET_BACKEND", "hf"),
+                device=os.getenv("OPEN_CRICKET_DEVICE", "auto"),
+                revision=os.getenv("OPEN_CRICKET_REVISION"),
             )
         else:
             app.state.classifier = classifier
         yield
 
-    app = FastAPI(title="LabelJudge", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Open Cricket", version="0.1.0", lifespan=lifespan)
 
     @app.middleware("http")
     async def request_metadata(request: HTTPRequest, call_next):
         response = await call_next(request)
         if request.url.path.startswith("/v1/"):
             response.headers["x-request-id"] = str(uuid4())
-            response.headers["x-labeljudge-confidence-method"] = "normalized-entropy"
+            response.headers["x-open-cricket-confidence-method"] = "normalized-entropy"
         return response
 
     @app.get("/v1/models", response_model=ModelsResponse, dependencies=[Depends(authenticate)])
@@ -60,7 +60,7 @@ def create_app(classifier=None, *, model_name=None):
             "models": [
                 {
                     "name": name,
-                    "description": f"LabelJudge local inference using {served_model}; structured decision API.",
+                    "description": f"Open Cricket local inference using {served_model}; structured decision API.",
                     "release_date": "2026-09-21",
                 }
                 for name in (served_model,)

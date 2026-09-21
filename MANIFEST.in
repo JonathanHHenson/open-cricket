@@ -1,0 +1,4 @@
+include LICENSE README.md uv.lock
+recursive-include docs *.md *.svg
+recursive-include examples *.py *.json
+recursive-include tests *.py

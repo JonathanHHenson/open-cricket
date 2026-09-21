@@ -35,4 +35,4 @@ class Client:
 
     def as_runnable(self):
         from langchain_core.runnables import RunnableLambda
-        return RunnableLambda(self.invoke, name="labeljudge_http")
+        return RunnableLambda(self.invoke, name="open_cricket_http")

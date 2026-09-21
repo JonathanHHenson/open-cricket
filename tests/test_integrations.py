@@ -5,7 +5,7 @@ import unittest
 from types import SimpleNamespace
 from typing import TypedDict
 
-from labeljudge.integrations import (
+from open_cricket.integrations import (
     ProbabilityUnavailableError,
     as_runnable,
     chat_runnable,

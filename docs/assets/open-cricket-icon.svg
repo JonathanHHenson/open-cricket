@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title"><title id="title">Open Cricket mascot</title><g id="cricket">
+<g fill="none" stroke="#174E3D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+<path d="M165 88 C163 65 153 49 140 43"/>
+<path d="M181 85 C184 61 197 46 212 43"/>
+<path d="M159 152 L169 198 H187"/>
+</g>
+<path fill="#53B77B" d="M40 153 C55 127 89 112 119 114 C145 116 157 129 153 149 C148 174 119 182 89 176 C68 172 51 163 40 153 Z"/>
+<circle cx="174" cy="115" r="33" fill="#53B77B"/>
+<circle cx="184" cy="110" r="5.5" fill="#174E3D"/>
+<path d="M89 138 L116 164 L87 198 H56" fill="none" stroke="#174E3D" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</g></svg>

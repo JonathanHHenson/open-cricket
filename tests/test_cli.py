@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from labeljudge.cli import format_pretty, main
+from open_cricket.cli import format_pretty, main
 
 
 class CliTests(unittest.TestCase):
@@ -18,7 +18,7 @@ class CliTests(unittest.TestCase):
                                   "probabilities": {"billing": .75, "other": .25}}},
         }
 
-        from labeljudge import Choice
+        from open_cricket import Choice
         self.assertEqual(
             format_pretty(result, "I was charged twice.",
                           {"route": Choice(instructions="Which team?", criteria={"billing": None, "other": None})}),
@@ -37,8 +37,8 @@ class CliTests(unittest.TestCase):
     def test_demo_accepts_pretty_and_time_flags(self):
         output = io.StringIO()
         with (
-            patch.object(sys, "argv", ["labeljudge", "--demo", "--pretty", "--time"]),
-            patch("labeljudge.cli.perf_counter", side_effect=[10.0, 12.3456]),
+            patch.object(sys, "argv", ["open_cricket", "--demo", "--pretty", "--time"]),
+            patch("open_cricket.cli.perf_counter", side_effect=[10.0, 12.3456]),
             contextlib.redirect_stdout(output),
         ):
             main()
@@ -53,8 +53,8 @@ class CliTests(unittest.TestCase):
     def test_time_is_included_in_json_output(self):
         output = io.StringIO()
         with (
-            patch.object(sys, "argv", ["labeljudge", "--demo", "--time"]),
-            patch("labeljudge.cli.perf_counter", side_effect=[10.0, 12.3456789]),
+            patch.object(sys, "argv", ["open_cricket", "--demo", "--time"]),
+            patch("open_cricket.cli.perf_counter", side_effect=[10.0, 12.3456789]),
             contextlib.redirect_stdout(output),
         ):
             main()
@@ -97,10 +97,10 @@ class CliTests(unittest.TestCase):
                 patch.object(
                     sys,
                     "argv",
-                    ["labeljudge", "--input", input_file.name, "--time"],
+                    ["open_cricket", "--input", input_file.name, "--time"],
                 ),
-                patch("labeljudge.hf.HuggingFaceBackend", Backend),
-                patch("labeljudge.cli.perf_counter", side_effect=clock),
+                patch("open_cricket.hf.HuggingFaceBackend", Backend),
+                patch("open_cricket.cli.perf_counter", side_effect=clock),
                 contextlib.redirect_stdout(output),
             ):
                 main()
@@ -116,8 +116,8 @@ if __name__ == "__main__":
 
 class BackendSelectionTests(unittest.TestCase):
     def test_mlx_factory_is_lazy_and_forwards_configuration(self):
-        from labeljudge.backend import load_backend
-        with patch('labeljudge.mlx.MLXBackend') as factory:
+        from open_cricket.backend import load_backend
+        with patch('open_cricket.mlx.MLXBackend') as factory:
             result = load_backend('mlx', 'local/model', 'auto', 'revision')
         factory.assert_called_once_with('local/model', 'auto', 'revision')
         self.assertIs(result, factory.return_value)

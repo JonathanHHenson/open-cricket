@@ -9,10 +9,10 @@ import unittest
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-from labeljudge import Choice, Client, LocalClient, Noul, Score
-from labeljudge.cli import main, format_pretty
-from labeljudge.server import create_app
-from labeljudge.systemone import SystemOneRequest
+from open_cricket import Choice, Client, LocalClient, Noul, Score
+from open_cricket.cli import main, format_pretty
+from open_cricket.server import create_app
+from open_cricket.systemone import SystemOneRequest
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -40,14 +40,14 @@ class SdkTests(unittest.TestCase):
                 self.assertEqual(set(expected), {'model', 'answers', 'usage'})
                 self.assertEqual(set(expected['answers']), set(payload['questions']))
                 self.assertEqual(asyncio.run(client.ainvoke(payload)), expected)
-                with patch.dict('os.environ', {'LABELJUDGE_API_KEY': ''}):
+                with patch.dict('os.environ', {'OPEN_CRICKET_API_KEY': ''}):
                     with TestClient(create_app(client, model_name=client.model)) as http:
                         response = http.post('/v1/systemone', json=payload)
                         self.assertEqual(response.status_code, 200, response.text)
                         self.assertEqual(response.json(), expected)
                 output = io.StringIO()
-                with patch.object(sys, 'argv', ['labeljudge', '--input', str(path)]), \
-                     patch('labeljudge.backend.load_backend', return_value=Tokens()) as load, \
+                with patch.object(sys, 'argv', ['open_cricket', '--input', str(path)]), \
+                     patch('open_cricket.backend.load_backend', return_value=Tokens()) as load, \
                      contextlib.redirect_stdout(output):
                     main()
                 load.assert_called_once_with('hf', payload['model'], 'auto', None)
@@ -68,21 +68,21 @@ class SdkTests(unittest.TestCase):
         self.assertIn('Score:', pretty)
         self.assertIn('Yes probability:', pretty)
         with self.assertRaisesRegex(ValueError, 'Unknown model'):
-            client.system_one('Test', questions, model='labeljudge')
+            client.system_one('Test', questions, model='open_cricket')
 
     def test_invalid_shape_rejected_across_clients_and_cli(self):
         payload = {'message': 'test', 'questions': [{'question': 'Which?', 'options': ['a']}]}
         with self.assertRaises(ValueError):
             LocalClient(backend=Tokens()).invoke(payload)
-        with patch('labeljudge.client.urlopen') as network:
+        with patch('open_cricket.client.urlopen') as network:
             with self.assertRaises(ValueError):
                 Client().invoke(payload)
         network.assert_not_called()
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as source:
             json.dump(payload, source)
             source.flush()
-            with patch.object(sys, 'argv', ['labeljudge', '--input', source.name]), \
-                 patch('labeljudge.backend.load_backend') as load, \
+            with patch.object(sys, 'argv', ['open_cricket', '--input', source.name]), \
+                 patch('open_cricket.backend.load_backend') as load, \
                  contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
                 main()
             self.assertEqual(error.exception.code, 2)
@@ -90,9 +90,9 @@ class SdkTests(unittest.TestCase):
 
     def test_cli_explicit_model_override_loads_and_reports_selected_model(self):
         output = io.StringIO()
-        with patch.object(sys, 'argv', ['labeljudge', '--input', str(ROOT / 'examples/support.json'),
+        with patch.object(sys, 'argv', ['open_cricket', '--input', str(ROOT / 'examples/support.json'),
                                       '--model', 'custom/checkpoint']), \
-             patch('labeljudge.backend.load_backend', return_value=Tokens()) as load, \
+             patch('open_cricket.backend.load_backend', return_value=Tokens()) as load, \
              contextlib.redirect_stdout(output):
             main()
         self.assertEqual(load.call_args.args[1], 'custom/checkpoint')

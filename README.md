@@ -1,4 +1,6 @@
-# LabelJudge
+# Open Cricket
+
+![Open Cricket mascot](docs/assets/open-cricket-icon.svg)
 
 Local structured decisions using causal language models. The CLI, Python SDK,
 REST API, and LangChain integrations share one request contract:
@@ -6,15 +8,26 @@ REST API, and LangChain integrations share one request contract:
 `answers`, and `usage`. Choice selects a category, Score evaluates a rubric,
 and Noul returns the relative probability of a yes/true answer.
 
-The default checkpoint is `Qwen/Qwen2.5-1.5B-Instruct`. LabelJudge is independent
+The default checkpoint is `Qwen/Qwen2.5-1.5B-Instruct`. Open Cricket is independent
 of TypeSafe; its API follows Jev's general call shapes, but model predictions
 and confidence calibration differ.
+
+## Documentation
+
+See the [documentation index](docs/README.md) for the [server guide](docs/server.md),
+[API reference](docs/api.md), and [Python SDK guide](docs/sdk.md).
+The [technical section](docs/technical/README.md) covers architecture, scoring,
+backend development, and testing for contributors.
+
+The package and command are `open-cricket`; Python imports use `open_cricket`.
+See the [rename guide](docs/renaming.md) for configuration changes and the
+[release guide](docs/technical/releases.md) for GitHub-to-PyPI setup.
 
 ## Quick start: local model, no server
 
 ```bash
 uv sync --extra hf
-uv run labeljudge --input examples/support.json --pretty --time
+uv run open-cricket --input examples/support.json --pretty --time
 ```
 
 The same input file can be sent to the REST API or passed to `LocalClient.invoke`.
@@ -52,15 +65,15 @@ The first run downloads the selected model from Hugging Face. Remote model code
 is disabled. To explore the scoring mathematics with synthetic probabilities:
 
 ```bash
-uv run labeljudge --demo --pretty
-uv run labeljudge --demo --mode constrained
+uv run open-cricket --demo --pretty
+uv run open-cricket --demo --mode constrained
 ```
 
 ## Direct Python SDK
 
 ```python
 import json
-from labeljudge import LocalClient, Choice, Score, Noul
+from open_cricket import LocalClient, Choice, Score, Noul
 
 client = LocalClient(model="Qwen/Qwen2.5-1.5B-Instruct")
 result = client.system_one(
@@ -88,26 +101,26 @@ model must match the client's loaded model. There are no branded model aliases.
 
 ```bash
 uv sync --extra hf --extra server
-export LABELJUDGE_MODEL=Qwen/Qwen2.5-1.5B-Instruct
-export LABELJUDGE_API_KEY="choose-a-local-server-key"
-uv run uvicorn labeljudge.server:app --host 127.0.0.1 --port 8000
+export OPEN_CRICKET_MODEL=Qwen/Qwen2.5-1.5B-Instruct
+export OPEN_CRICKET_API_KEY="choose-a-local-server-key"
+uv run uvicorn open_cricket.server:app --host 127.0.0.1 --port 8000
 ```
 
 ```bash
 curl http://127.0.0.1:8000/v1/systemone \
-  -H "Authorization: Bearer $LABELJUDGE_API_KEY" \
+  -H "Authorization: Bearer $OPEN_CRICKET_API_KEY" \
   -H "Content-Type: application/json" \
   --data-binary @examples/support.json
 ```
 
 `GET /v1/models` lists the configured checkpoint. `GET /health` reports readiness;
-`/docs` exposes OpenAPI documentation. Set `LABELJUDGE_BACKEND=mlx` to serve MLX.
-Authentication is disabled if `LABELJUDGE_API_KEY` is unset. Requests select the
+`/docs` exposes OpenAPI documentation. Set `OPEN_CRICKET_BACKEND=mlx` to serve MLX.
+Authentication is disabled if `OPEN_CRICKET_API_KEY` is unset. Requests select the
 configured model by its exact name; they do not trigger model downloads.
 
 ```python
 import json
-from labeljudge import Client, Choice
+from open_cricket import Client, Choice
 
 client = Client("http://127.0.0.1:8000", api_key="choose-a-local-server-key")
 result = client.system_one(
@@ -130,8 +143,8 @@ uv sync --extra hf --extra langgraph
 
 ```python
 import json
-from labeljudge.hf import HuggingFaceBackend
-from labeljudge.integrations import as_runnable
+from open_cricket.hf import HuggingFaceBackend
+from open_cricket.integrations import as_runnable
 
 judge = as_runnable(HuggingFaceBackend(), model="Qwen/Qwen2.5-1.5B-Instruct")
 with open("examples/support.json") as f:
@@ -176,7 +189,7 @@ For Apple silicon, install and select the optional MLX runtime:
 
 ```bash
 uv sync --extra mlx
-uv run labeljudge --backend mlx --input examples/support.json --pretty --time
+uv run open-cricket --backend mlx --input examples/support.json --pretty --time
 ```
 
 MLX accepts compatible Hugging Face checkpoints and MLX-converted quantized
@@ -186,12 +199,12 @@ The MLX extra is restricted to Apple silicon macOS and uses MLX-LM 0.28.x to
 remain compatible with this project's Transformers 4.x dependency. It requires
 an accessible Metal GPU. Hugging Face remains the default runtime.
 
-In Python, use `from labeljudge.mlx import MLXBackend` and pass `MLXBackend()`
+In Python, use `from open_cricket.mlx import MLXBackend` and pass `MLXBackend()`
 to `classify` or `as_runnable`. For the HTTP service:
 
 ```bash
 uv sync --extra mlx --extra server
-LABELJUDGE_BACKEND=mlx uv run uvicorn labeljudge.server:app --host 127.0.0.1
+OPEN_CRICKET_BACKEND=mlx uv run uvicorn open_cricket.server:app --host 127.0.0.1
 ```
 
 Keep the model loaded between requests (for example through the HTTP service).

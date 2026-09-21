@@ -7,7 +7,7 @@ Not every model supports logprobs or the default request parameters.
 import importlib
 import os
 
-from labeljudge.integrations import chat_runnable
+from open_cricket.integrations import chat_runnable
 
 ChatOpenAI = importlib.import_module("langchain_openai").ChatOpenAI
 

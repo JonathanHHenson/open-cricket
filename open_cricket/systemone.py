@@ -1,4 +1,4 @@
-"""Structured decision API over LabelJudge's local probability scorer.
+"""Structured decision API over Open Cricket's local probability scorer.
 
 This matches the public question/answer shapes, not Jev's model calibration.
 """

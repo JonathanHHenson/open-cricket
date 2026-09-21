@@ -1,6 +1,6 @@
 import unittest
 from fastapi.testclient import TestClient
-from labeljudge.server import create_app
+from open_cricket.server import create_app
 
 
 class ServerTests(unittest.TestCase):
