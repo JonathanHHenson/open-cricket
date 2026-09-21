@@ -26,6 +26,8 @@ backend development, and testing for contributors.
 
 The package and command are `open-cricket`; Python imports use `open_cricket`.
 See the [release guide](docs/technical/releases.md) for GitHub-to-PyPI setup.
+The [v0.2.0 release notes](docs/releases/v0.2.0.md) cover the new scoring default,
+performance results, and migration from v0.1.0.
 
 ## Quick start: local model, no server
 
@@ -410,4 +412,4 @@ require their respective HF or MLX dependencies and hardware.
 - [LangChain ChatOpenAI](https://docs.langchain.com/oss/python/integrations/chat/openai): chat interface and logprobs metadata.
 - [LangGraph graph API](https://docs.langchain.com/oss/python/langgraph/graph-api): state updates and conditional edges.
 
-Version 0.1.0. An independent educational prototype; no affiliation with TypeSafe.
+Version 0.2.0. An independent educational prototype; no affiliation with TypeSafe.

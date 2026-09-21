@@ -525,62 +525,6 @@ wheels = [
 ]
 
 [[package]]
-name = "open-cricket"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.optional-dependencies]
-hf = [
-    { name = "torch" },
-    { name = "transformers" },
-]
-langchain = [
-    { name = "langchain-core" },
-]
-langgraph = [
-    { name = "langchain-core" },
-    { name = "langgraph" },
-]
-mlx = [
-    { name = "mlx-lm", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
-]
-server = [
-    { name = "fastapi" },
-    { name = "langchain-core" },
-    { name = "uvicorn" },
-]
-test = [
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "langchain-core" },
-    { name = "langgraph" },
-    { name = "typesafe-sdk" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115,<1" },
-    { name = "fastapi", marker = "extra == 'test'", specifier = ">=0.115,<1" },
-    { name = "httpx", marker = "extra == 'test'", specifier = ">=0.27,<1" },
-    { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=1,<2" },
-    { name = "langchain-core", marker = "extra == 'langgraph'", specifier = ">=1,<2" },
-    { name = "langchain-core", marker = "extra == 'server'", specifier = ">=1,<2" },
-    { name = "langchain-core", marker = "extra == 'test'", specifier = ">=1,<2" },
-    { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=1,<2" },
-    { name = "langgraph", marker = "extra == 'test'", specifier = ">=1,<2" },
-    { name = "mlx-lm", marker = "platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'mlx'", specifier = ">=0.28,<0.29" },
-    { name = "pydantic", specifier = ">=2.9,<3" },
-    { name = "torch", marker = "extra == 'hf'", specifier = ">=2.2,<3" },
-    { name = "transformers", marker = "extra == 'hf'", specifier = ">=4.45,<5" },
-    { name = "typesafe-sdk", marker = "extra == 'test'", specifier = ">=0.7,<0.8" },
-    { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.30,<1" },
-]
-provides-extras = ["hf", "mlx", "langchain", "langgraph", "server", "test"]
-
-[[package]]
 name = "langchain-core"
 version = "1.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1251,6 +1195,62 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/f3/d86c845465a2723ad7e1e5c36dcd75ddb82898b3f53be47ebd429fb2fa5d/nvidia_nvtx-13.0.85-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:4936d1d6780fbe68db454f5e72a42ff64d1fd6397df9f363ae786930fd5c1cd4", size = 148047, upload-time = "2025-09-04T08:29:01.761Z" },
     { url = "https://files.pythonhosted.org/packages/a8/64/3708a90d1ebe202ffdeb7185f878a3c84d15c2b2c31858da2ce0583e2def/nvidia_nvtx-13.0.85-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:cb7780edb6b14107373c835bf8b72e7a178bac7367e23da7acb108f973f157a6", size = 148878, upload-time = "2025-09-04T08:28:53.627Z" },
 ]
+
+[[package]]
+name = "open-cricket"
+version = "0.2.0"
+source = { editable = "." }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+hf = [
+    { name = "torch" },
+    { name = "transformers" },
+]
+langchain = [
+    { name = "langchain-core" },
+]
+langgraph = [
+    { name = "langchain-core" },
+    { name = "langgraph" },
+]
+mlx = [
+    { name = "mlx-lm", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+]
+server = [
+    { name = "fastapi" },
+    { name = "langchain-core" },
+    { name = "uvicorn" },
+]
+test = [
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "langchain-core" },
+    { name = "langgraph" },
+    { name = "typesafe-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115,<1" },
+    { name = "fastapi", marker = "extra == 'test'", specifier = ">=0.115,<1" },
+    { name = "httpx", marker = "extra == 'test'", specifier = ">=0.27,<1" },
+    { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=1,<2" },
+    { name = "langchain-core", marker = "extra == 'langgraph'", specifier = ">=1,<2" },
+    { name = "langchain-core", marker = "extra == 'server'", specifier = ">=1,<2" },
+    { name = "langchain-core", marker = "extra == 'test'", specifier = ">=1,<2" },
+    { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=1,<2" },
+    { name = "langgraph", marker = "extra == 'test'", specifier = ">=1,<2" },
+    { name = "mlx-lm", marker = "platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'mlx'", specifier = ">=0.28,<0.29" },
+    { name = "pydantic", specifier = ">=2.9,<3" },
+    { name = "torch", marker = "extra == 'hf'", specifier = ">=2.2,<3" },
+    { name = "transformers", marker = "extra == 'hf'", specifier = ">=4.45,<5" },
+    { name = "typesafe-sdk", marker = "extra == 'test'", specifier = ">=0.7,<0.8" },
+    { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.30,<1" },
+]
+provides-extras = ["hf", "mlx", "langchain", "langgraph", "server", "test"]
 
 [[package]]
 name = "orjson"

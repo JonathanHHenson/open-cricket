@@ -2,6 +2,15 @@
 
 [Technical index](README.md)
 
+## Release notes
+
+- [v0.2.0: default answer-code scoring and faster local inference](../releases/v0.2.0.md)
+
+The versioned notes include user-facing changes, compatibility guidance, and
+benchmark context, and can be used as the GitHub release description.
+
+## Publishing workflow
+
 The [GitHub Actions workflow](../../.github/workflows/publish.yml) tests Python
 3.10 and 3.12, builds a source distribution and wheel, checks metadata with Twine,
 and smoke-tests the installed wheel outside the checkout. The default CI suite
@@ -10,7 +19,7 @@ does not install HF or MLX, so their optional runtime tests skip.
 Pushes to `main`, pull requests, and manual workflow runs validate artifacts
 without publishing. Publishing a GitHub release triggers the same checks followed
 by a PyPI upload. The release tag must exactly match `v` plus the version in
-`pyproject.toml` (initially `v0.1.0`). Published prereleases also trigger uploads;
+`pyproject.toml` (for example, `v0.2.0`). Published prereleases also trigger uploads;
 use a PEP 440 prerelease version such as `0.2.0rc1` when appropriate.
 
 ## Release checklist
@@ -22,6 +31,10 @@ use a PEP 440 prerelease version such as `0.2.0rc1` when appropriate.
 5. Approve the `pypi` environment deployment if reviewers are configured.
 6. Verify the workflow and the resulting PyPI release, then install it in a clean
    environment with `python -m pip install 'open-cricket==<version>'`.
+
+For v0.2.0, the package version and local tag are already present. The checked-in
+`uv.lock` still records the root package as 0.1.0; refresh it as part of release
+preparation. Check publication status before publishing or changing existing tags.
 
 For a local packaging check:
 

@@ -6,6 +6,9 @@ and Noul returns the relative probability of a yes/true answer.
 
 ## User guides
 
+Read the [v0.2.0 release notes](releases/v0.2.0.md) for performance changes and
+migration guidance for the new answer-code default.
+
 | Guide | Use it to |
 | --- | --- |
 | [Running the server](server.md) | Install, configure, operate, and troubleshoot the service |
