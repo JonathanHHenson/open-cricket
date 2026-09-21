@@ -2,7 +2,7 @@
 import unittest
 
 from open_cricket.core import score_paths
-from open_cricket.local import LocalBackend
+from open_cricket.local import LocalBackend, ModelPrompt
 
 
 def check_real_chains(test, backend):
@@ -89,6 +89,37 @@ class CacheTests(unittest.TestCase):
             session((), (9,))
         self.assertIsNone(session.cache)
 
+    def test_multimodal_prompt_metadata_reaches_prefill(self):
+        class MultimodalBackend(ToyBackend):
+            def _forward(self, ids, cache, use_cache, model_inputs=None):
+                self.inputs = model_inputs
+                return super()._forward(ids, cache, use_cache)
+
+        backend = MultimodalBackend()
+        prompt = ModelPrompt([7, 8], {'pixel_values': object()})
+        backend.next_logprobs(prompt, (), (9,))
+        self.assertIn('pixel_values', backend.inputs)
+        backend.scorer(prompt)((), (9,))
+        self.assertIn('pixel_values', backend.inputs)
+
+    def test_text_chat_template_accepts_transformers_4_and_5_shapes(self):
+        class Tokenizer:
+            chat_template = 'template'
+
+            def __init__(self, encoded):
+                self.encoded = encoded
+                self.kwargs = None
+
+            def apply_chat_template(self, *args, **kwargs):
+                self.kwargs = kwargs
+                return self.encoded
+
+        backend = ToyBackend()
+        for encoded in ([1, 2, 3], {'input_ids': [1, 2, 3], 'attention_mask': [1, 1, 1]}):
+            backend.tokenizer = Tokenizer(encoded)
+            self.assertEqual(backend.prompt_ids('system', 'form'), [1, 2, 3])
+            self.assertIs(backend.tokenizer.kwargs['enable_thinking'], False)
+
 
 class ChainBackend(ToyBackend):
     def _forward_many(self, ids, cache, use_cache, count):
@@ -145,6 +176,38 @@ except ImportError:
 
 @unittest.skipIf(torch is None, 'optional HF dependencies not installed')
 class HuggingFaceCacheTests(unittest.TestCase):
+    def test_pretrained_loader_uses_local_cache_before_network(self):
+        from open_cricket.hf import _cached_from_pretrained
+
+        class Loader:
+            calls = []
+
+            @classmethod
+            def from_pretrained(cls, model, **kwargs):
+                cls.calls.append((model, kwargs))
+                return 'loaded'
+
+        self.assertEqual(_cached_from_pretrained(Loader, 'model', revision='abc'), 'loaded')
+        self.assertEqual(Loader.calls, [
+            ('model', {'local_files_only': True, 'revision': 'abc'})
+        ])
+
+        Loader.calls = []
+
+        class MissingLoader(Loader):
+            @classmethod
+            def from_pretrained(cls, model, **kwargs):
+                cls.calls.append((model, kwargs))
+                if kwargs.get('local_files_only'):
+                    raise OSError('not cached')
+                return 'downloaded'
+
+        self.assertEqual(_cached_from_pretrained(MissingLoader, 'new-model'), 'downloaded')
+        self.assertEqual(MissingLoader.calls, [
+            ('new-model', {'local_files_only': True}),
+            ('new-model', {}),
+        ])
+
     def test_question_batch_matches_independent_full_forwards(self):
         from open_cricket.hf import HuggingFaceBackend
         torch.manual_seed(42)
@@ -216,6 +279,14 @@ class HuggingFaceCacheTests(unittest.TestCase):
 
 
 class MLXCacheTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        try:
+            import mlx.core  # noqa: F401
+            from mlx_lm.models.qwen2 import Model  # noqa: F401
+        except Exception as error:
+            raise unittest.SkipTest(f'MLX runtime unavailable: {error}') from error
+
     def test_selected_projection_matches_full_for_tied_untied_and_quantized_models(self):
         try:
             import mlx.core as mx
@@ -253,6 +324,86 @@ class MLXCacheTests(unittest.TestCase):
         backend.model = WrappedModel()
         actual, _ = backend._forward([7, 8], None, False)
         self.assertTrue(mx.all(actual == 3).item())
+
+    def test_vision_branches_recompute_images_without_cache(self):
+        import mlx.core as mx
+        from open_cricket.mlx import MLXBackend
+
+        calls = []
+
+        class VisionModel:
+            def __call__(self, ids, cache=None, pixel_values=None):
+                calls.append((ids.tolist(), cache, pixel_values.item()))
+                return mx.broadcast_to(mx.arange(16), (1, ids.shape[1], 16))
+
+        backend = MLXBackend.__new__(MLXBackend)
+        backend.mx, backend.limit = mx, 128
+        backend._multimodal = True
+        backend.model = VisionModel()
+        prompt = ModelPrompt([7, 8], {'pixel_values': mx.array(3)})
+        scorer = backend.scorer(prompt)
+        for prefix in [(), (1,), (2,), ()]:
+            actual = scorer(prefix, (9, 10))
+            self.assertAlmostEqual(actual[10] - actual[9], 1.0, places=5)
+        self.assertEqual(calls, [
+            ([[7, 8]], None, 3), ([[7, 8, 1]], None, 3),
+            ([[7, 8, 2]], None, 3), ([[7, 8]], None, 3),
+        ])
+
+    def test_qwen_vision_grid_uses_integer_frame_counts(self):
+        import mlx.core as mx
+        from open_cricket.mlx_vision import QwenVisionAdapter
+
+        class Encoder:
+            deepstack_visual_indexes = []
+            patch_embed = staticmethod(lambda x: x)
+            merger = staticmethod(lambda x: x)
+            fast_pos_embed_interpolate = staticmethod(lambda grid: mx.zeros((6, 2)))
+            rot_pos_emb = staticmethod(lambda grid: mx.zeros((6, 2)))
+
+            def __init__(self):
+                def block(hidden, cu_seqlens, rotary_pos_emb):
+                    self.offsets = cu_seqlens.tolist()
+                    return hidden
+                self.blocks = [block]
+
+        encoder = Encoder()
+        output, features = QwenVisionAdapter(encoder)(
+            mx.ones((6, 2)), mx.array([[2, 1, 2], [1, 1, 2]])
+        )
+        self.assertEqual(encoder.offsets, [0, 2, 4, 6])
+        self.assertEqual(output.shape, (6, 2))
+        self.assertEqual(features, [])
+
+    def test_qwen25_vision_preserves_window_offsets(self):
+        import mlx.core as mx
+        from open_cricket.mlx_vision import Qwen25VisionAdapter
+
+        class Encoder:
+            spatial_merge_unit = 1
+            fullatt_block_indexes = [1]
+            patch_embed = staticmethod(lambda x: x)
+            merger = staticmethod(lambda x: x)
+            rot_pos_emb = staticmethod(lambda grid: mx.zeros((6, 2)))
+            get_window_index = staticmethod(
+                lambda grid: (mx.arange(6), mx.array([0, 1, 1, 3, 6]))
+            )
+
+            def __init__(self):
+                self.offsets = []
+
+                def block(hidden, cu_seqlens, rotary_pos_emb):
+                    self.offsets.append(cu_seqlens.tolist())
+                    return hidden
+
+                self.blocks = [block, block]
+
+        encoder = Encoder()
+        output = Qwen25VisionAdapter(encoder)(
+            mx.ones((6, 2)), mx.array([[2, 1, 2], [1, 1, 2]])
+        )
+        self.assertEqual(encoder.offsets, [[0, 1, 3, 6], [0, 2, 4, 6]])
+        self.assertEqual(output.shape, (6, 2))
 
     def test_real_mlx_cache_matches_full_forward(self):
         try:

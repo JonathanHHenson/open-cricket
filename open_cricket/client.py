@@ -1,4 +1,5 @@
 """Small stdlib HTTP client; optional Runnable conversion for remote inference."""
+
 import json
 from urllib.request import Request, urlopen
 
@@ -12,14 +13,19 @@ class Client:
 
     def invoke(self, value):
         from .systemone import SystemOneRequest
+
         request = SystemOneRequest.model_validate(value)
         return self._request(self.url, request.model_dump(mode="json"))
 
-    def system_one(self, state, questions, *, model="Qwen/Qwen2.5-1.5B-Instruct"):
+    def system_one(self, state, questions, *, model="Qwen/Qwen2.5-1.5B-Instruct", images=()):
         """Evaluate typed questions against state; returns the JSON response as a dict."""
-        questions = {name: question.model_dump(mode="json") if hasattr(question, "model_dump") else question
-                     for name, question in questions.items()}
-        return self.invoke({"state": state, "questions": questions, "model": model})
+        questions = {
+            name: question.model_dump(mode="json") if hasattr(question, "model_dump") else question
+            for name, question in questions.items()
+        }
+        return self.invoke(
+            {"state": state, "questions": questions, "model": model, "images": list(images)}
+        )
 
     def models(self):
         return self._request(self.base_url + "/v1/models")
@@ -29,10 +35,13 @@ class Client:
         if self.api_key:
             headers["Authorization"] = "Bearer " + self.api_key
         data = json.dumps(value, allow_nan=False).encode("utf-8") if value is not None else None
-        request = Request(url, data=data, headers=headers, method="POST" if data is not None else "GET")
+        request = Request(
+            url, data=data, headers=headers, method="POST" if data is not None else "GET"
+        )
         with urlopen(request, timeout=self.timeout) as response:
             return json.load(response)
 
     def as_runnable(self):
         from langchain_core.runnables import RunnableLambda
+
         return RunnableLambda(self.invoke, name="open_cricket_http")

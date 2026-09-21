@@ -13,8 +13,16 @@ requires-python = ">=3.10"
 dependencies = ["pydantic>=2.9,<3"]
 
 [project.optional-dependencies]
-hf = ["torch>=2.2,<3", "transformers>=4.45,<5"]
-mlx = ["mlx-lm>=0.28,<0.29; sys_platform == 'darwin' and platform_machine == 'arm64'"]
+hf = [
+    "pillow>=10,<13",
+    "torch>=2.2,<3",
+    "torchvision>=0.17,<1",
+    "transformers>=5.2,<6",
+]
+mlx = [
+    "mlx-lm>=0.30.7,<0.32; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "mlx-vlm[torch]==0.3.12 ; platform_machine == 'arm64' and sys_platform == 'darwin'",
+]
 langchain = ["langchain-core>=1,<2"]
 langgraph = ["langchain-core>=1,<2", "langgraph>=1,<2"]
 server = ["langchain-core>=1,<2", "fastapi>=0.115,<1", "uvicorn>=0.30,<1"]

@@ -7,7 +7,7 @@
 A backend implements three methods without needing a particular base class:
 
 ```python
-def prompt_ids(self, system: str, form: str) -> list[int]: ...
+def prompt_ids(self, system: str, form: str, images: Sequence[str] = ()) -> Sequence[int]: ...
 def answer_ids(self, answer: str) -> list[int]: ...
 def next_logprobs(self, prompt, prefix, allowed) -> dict[int, float]: ...
 ```
@@ -32,6 +32,17 @@ keep imports lazy.
 `scorer(prompt)` may return a `(prefix, allowed)` callback. `classify` prefers it
 over the required-method fallback. Create a new session per classification;
 cache state must not survive between questions or requests.
+
+The original two-argument `prompt_ids` method remains valid for custom text-only
+backends. It is called with `images` only when a request actually supplies images.
+Backends that support images may return `open_cricket.local.ModelPrompt`, which
+keeps processor tensors alongside the prompt token IDs for the initial prefill.
+
+MLX selects MLX-VLM when the checkpoint config contains `vision_config`, otherwise
+MLX-LM. VLM scoring recomputes complete prefixes with the image tensors for each
+candidate, avoiding rollback of recurrent and image-position state. This is slower
+than cache reuse but keeps branch scores independent. Text-only MLX-LM models
+retain the existing request-local cache optimization.
 
 The callback may additionally provide `score_chain(requests)`, returning one
 probability mapping per `(prefix, allowed)` pair in order. Requests are consecutive

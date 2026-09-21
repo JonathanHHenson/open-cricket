@@ -11,7 +11,9 @@ class ProbabilityUnavailableError(ValueError):
     """Provider omitted probabilities needed for an honest comparison."""
 
 
-def as_runnable(backend, *, model="Qwen/Qwen2.5-1.5B-Instruct", mode="answer_codes", temperature=1.0):
+def as_runnable(
+    backend, *, model="Qwen/Qwen2.5-1.5B-Instruct", mode="answer_codes", temperature=1.0
+):
     """Runnable consuming state/model/questions and returning typed answers."""
     from langchain_core.runnables import RunnableLambda
 
@@ -50,6 +52,8 @@ def chat_runnable(
     bound = model.bind(**kwargs)
 
     def messages(value):
+        if value.get("images"):
+            raise ValueError("chat_runnable does not support image inputs; use a local HF backend")
         options = value["options"]
         categories = normalize_options(options)
         form = build_form(value["message"], value["question"], options)
@@ -142,7 +146,7 @@ def chat_runnable(
     def system_run(value, config: RunnableConfig):
         request = request_for(value)
         results = [
-            raw.invoke(classification_input(request.state, question), config=config)
+            raw.invoke(classification_input(request.state, question, request.images), config=config)
             for question in request.questions.values()
         ]
         return format_response(request, model_name, results).model_dump(mode="json")
@@ -150,7 +154,9 @@ def chat_runnable(
     async def system_arun(value, config: RunnableConfig):
         request = request_for(value)
         results = [
-            await raw.ainvoke(classification_input(request.state, question), config=config)
+            await raw.ainvoke(
+                classification_input(request.state, question, request.images), config=config
+            )
             for question in request.questions.values()
         ]
         return format_response(request, model_name, results).model_dump(mode="json")
@@ -169,14 +175,24 @@ def graph_node(runnable, *, output_key="classification"):
     def run(state, config: RunnableConfig):
         return {
             output_key: runnable.invoke(
-                {key: state[key] for key in ("state", "model", "questions")}, config=config
+                {
+                    key: state[key]
+                    for key in ("state", "model", "questions", "images")
+                    if key in state
+                },
+                config=config,
             )
         }
 
     async def arun(state, config: RunnableConfig):
         return {
             output_key: await runnable.ainvoke(
-                {key: state[key] for key in ("state", "model", "questions")}, config=config
+                {
+                    key: state[key]
+                    for key in ("state", "model", "questions", "images")
+                    if key in state
+                },
+                config=config,
             )
         }
 

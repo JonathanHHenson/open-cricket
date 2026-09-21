@@ -18,7 +18,15 @@ uv run uvicorn open_cricket.server:app --host 127.0.0.1 --port 8000
 
 Replace the example key with your own value. First startup may download model
 weights and the tokenizer. Startup completes after loading the model; remote
-model code is disabled.
+model code is disabled. Subsequent startups use complete cached files without a
+Hub request. The weight-loading progress bar reflects local deserialization and
+still appears on every process start; keep the server running to avoid reloading.
+
+To serve a modern vision-language checkpoint, set
+`OPEN_CRICKET_MODEL=Qwen/Qwen3.5-0.8B` and include an optional `images` array in
+requests. Each entry may be an image URL, data URL, or local path. Because the
+processor reads these sources during inference, do not expose unrestricted image
+URLs or filesystem paths to untrusted clients without an allowlist or proxy policy.
 
 In another terminal, set the same key and check the service:
 

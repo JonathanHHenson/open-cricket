@@ -4,7 +4,15 @@ import copy
 import importlib
 import inspect
 
-from .local import LocalBackend
+from .local import LocalBackend, ModelPrompt
+
+
+def _cached_from_pretrained(loader, model, **kwargs):
+    """Use a complete local cache without a Hub request, downloading only on a miss."""
+    try:
+        return loader.from_pretrained(model, local_files_only=True, **kwargs)
+    except OSError:
+        return loader.from_pretrained(model, **kwargs)
 
 
 class HuggingFaceBackend(LocalBackend):
@@ -24,34 +32,103 @@ class HuggingFaceBackend(LocalBackend):
         self._batch_questions = device != "cpu"
         self._max_batch_size = 32
         self._max_batch_tokens = 32768
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
-            model, revision=revision, trust_remote_code=False
+        config = _cached_from_pretrained(
+            transformers.AutoConfig, model, revision=revision, trust_remote_code=False
         )
-        self.model = (
-            transformers.AutoModelForCausalLM.from_pretrained(
-                model, revision=revision, trust_remote_code=False
+        self.processor = None
+        self._multimodal = getattr(config, "vision_config", None) is not None
+        if self._multimodal:
+            model_class = getattr(transformers, "AutoModelForMultimodalLM", None)
+            if model_class is None:
+                raise ImportError("This multimodal checkpoint requires Transformers 5.2 or newer")
+            self.processor = _cached_from_pretrained(
+                transformers.AutoProcessor, model, revision=revision, trust_remote_code=False
             )
-            .to(device)
-            .eval()
-        )
+            self.tokenizer = self.processor.tokenizer
+            self.model = (
+                _cached_from_pretrained(
+                    model_class,
+                    model,
+                    revision=revision,
+                    trust_remote_code=False,
+                    config=config,
+                )
+                .to(device)
+                .eval()
+            )
+        else:
+            self.tokenizer = _cached_from_pretrained(
+                transformers.AutoTokenizer, model, revision=revision, trust_remote_code=False
+            )
+            self.model = (
+                _cached_from_pretrained(
+                    transformers.AutoModelForCausalLM,
+                    model,
+                    revision=revision,
+                    trust_remote_code=False,
+                    config=config,
+                )
+                .to(device)
+                .eval()
+            )
         self._last_logits = "logits_to_keep" in inspect.signature(self.model.forward).parameters
         self.eos = self.tokenizer.eos_token_id
         if self.eos is None:
             raise ValueError("Model tokenizer must define an EOS/end-of-turn token")
         limits = [
             getattr(self.model.config, "max_position_embeddings", None),
+            getattr(
+                getattr(self.model.config, "text_config", None),
+                "max_position_embeddings",
+                None,
+            ),
             self.tokenizer.model_max_length,
         ]
         self.limit = min(x for x in limits if isinstance(x, int) and x > 0)
 
-    def _forward(self, ids, cache, use_cache):
-        logits, cache = self._forward_many(ids, cache, use_cache, 1)
+    def prompt_ids(self, system, form, images=()):
+        if not self._multimodal:
+            return super().prompt_ids(system, form, images)
+        content = [{"type": "image", "url": source} for source in images]
+        content.append({"type": "text", "text": form})
+        encoded = self.processor.apply_chat_template(
+            [
+                {"role": "system", "content": system},
+                {"role": "user", "content": content},
+            ],
+            tokenize=True,
+            add_generation_prompt=True,
+            # Keep reasoning-capable templates in their immediate-answer mode.
+            enable_thinking=False,
+            return_dict=True,
+            return_tensors="pt",
+        )
+        input_ids = encoded["input_ids"][0].tolist()
+        model_inputs = {
+            key: value.to(self.device) if hasattr(value, "to") else value
+            for key, value in encoded.items()
+            if key not in {"input_ids", "attention_mask"}
+        }
+        return ModelPrompt(input_ids, model_inputs)
+
+    def _forward(self, ids, cache, use_cache, model_inputs=None):
+        logits, cache = self._forward_many(ids, cache, use_cache, 1, model_inputs=model_inputs)
         return logits[0], cache
 
-    def _forward_many(self, ids, cache, use_cache, count):
+    def _forward_many(self, ids, cache, use_cache, count, model_inputs=None):
         tensor = self.torch.tensor([ids], dtype=self.torch.long, device=self.device)
         length = len(ids) + (cache.get_seq_length() if cache is not None else 0)
         kwargs = {"logits_to_keep": count} if self._last_logits else {}
+        if model_inputs:
+            kwargs.update(model_inputs)
+            token_types = kwargs.get("mm_token_type_ids")
+            if token_types is not None and token_types.shape[-1] < len(ids):
+                padding = self.torch.zeros(
+                    (*token_types.shape[:-1], len(ids) - token_types.shape[-1]),
+                    dtype=token_types.dtype,
+                    device=token_types.device,
+                )
+                kwargs["mm_token_type_ids"] = self.torch.cat((token_types, padding), dim=-1)
         with self.torch.inference_mode():
             output = self.model(
                 input_ids=tensor,
@@ -73,7 +150,9 @@ class HuggingFaceBackend(LocalBackend):
         layers = getattr(cache, "layers", None)
         if layers is None or any(type(layer).__name__ != "DynamicLayer" for layer in layers):
             return False
-        cache.crop(length)
+        remove = cache.get_seq_length() - length
+        if remove > 0:
+            cache.crop(-remove)
         return True
 
     def _select(self, logits, allowed):
@@ -84,6 +163,8 @@ class HuggingFaceBackend(LocalBackend):
         """Score answer codes for several prompts using one shared-prefix prefill."""
         if not requests:
             return []
+        if any(getattr(prompt, "model_inputs", None) for prompt, _ in requests):
+            return [self.next_logprobs(prompt, (), allowed) for prompt, allowed in requests]
         if not getattr(self, "_batch_questions", True):
             return [self.next_logprobs(prompt, (), allowed) for prompt, allowed in requests]
         sequences = [tuple(prompt) for prompt, _ in requests]
@@ -132,13 +213,15 @@ class HuggingFaceBackend(LocalBackend):
                 )
                 for row, index in enumerate(batch):
                     suffix = sequences[index][prefix_length:]
-                    ids[row, :len(suffix)] = self.torch.tensor(
+                    ids[row, : len(suffix)] = self.torch.tensor(
                         suffix, dtype=self.torch.long, device=self.device
                     )
-                    mask[row, :prefix_length + len(suffix)] = 1
-                positions = self.torch.arange(
-                    prefix_length, prefix_length + width, device=self.device
-                ).unsqueeze(0).expand(len(batch), -1)
+                    mask[row, : prefix_length + len(suffix)] = 1
+                positions = (
+                    self.torch.arange(prefix_length, prefix_length + width, device=self.device)
+                    .unsqueeze(0)
+                    .expand(len(batch), -1)
+                )
                 last = self.torch.tensor(
                     [lengths[index] - 1 for index in batch], device=self.device
                 )

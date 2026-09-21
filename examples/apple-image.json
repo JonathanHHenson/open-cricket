@@ -1,0 +1,36 @@
+{
+  "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "state": "Use the attached product photograph as the only evidence.",
+  "images": [
+    "examples/assets/red-apple.png"
+  ],
+  "questions": {
+    "object": {
+      "type": "choice",
+      "instructions": "Which object is shown in the image?",
+      "criteria": {
+        "apple": null,
+        "banana": null,
+        "orange": null
+      }
+    },
+    "colour": {
+      "type": "choice",
+      "instructions": "What is the main colour of the fruit?",
+      "criteria": {
+        "red": null,
+        "green": null,
+        "yellow": null
+      }
+    },
+    "ripeness": {
+      "type": "score",
+      "instructions": "How ripe is the fruit?",
+      "criteria": [
+        "Not Ripe: Don't Eat",
+        "Ready-To-Eat",
+        "Rotting"
+      ]
+    }
+  }
+}

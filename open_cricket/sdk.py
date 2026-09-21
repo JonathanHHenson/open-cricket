@@ -22,18 +22,18 @@ class LocalClient:
         if request.model != self.model:
             raise ValueError(f"Unknown model; this client serves {self.model}")
         with self._lock:
-            values = [classification_input(request.state, question)
+            values = [classification_input(request.state, question, request.images)
                       for question in request.questions.values()]
             results = classify_many(
                 self.backend, values, mode=self.mode, temperature=self.temperature
             )
         return format_response(request, self.model, results).model_dump(mode="json")
 
-    def system_one(self, state, questions, *, model=None):
+    def system_one(self, state, questions, *, model=None, images=()):
         questions = {name: question.model_dump(mode="json") if hasattr(question, "model_dump") else question
                      for name, question in questions.items()}
         return self.invoke({"state": state, "model": self.model if model is None else model,
-                            "questions": questions})
+                            "questions": questions, "images": list(images)})
 
     async def ainvoke(self, value):
         return await asyncio.to_thread(self.invoke, value)

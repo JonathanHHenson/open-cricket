@@ -13,6 +13,7 @@ From a checkout, install into your application's environment:
 python -m pip install -e '.[hf]'
 ```
 
+The `hf` extra includes the image-processing dependencies used by multimodal models.
 Use `.[mlx]` for Apple silicon MLX or `.` for HTTP-only usage. With the repository's
 `uv` environment, use `uv sync --extra hf` and run scripts with `uv run python`.
 
@@ -35,7 +36,39 @@ print(result["answers"]["urgency"]["score"])
 print(result["answers"]["billing_issue"]["noul"])
 ```
 
-Construction loads and potentially downloads the model. Reuse the client.
+Construction loads and potentially downloads the model. A complete cached model
+is loaded without contacting the Hub; a `Loading weights` bar means cached files
+are being deserialized, not downloaded. Reuse the client so weights stay in memory.
+
+Qwen 3.5 may report that `causal_conv1d_fn` and `chunk_gated_delta_rule` are
+using reference PyTorch implementations. On NVIDIA CUDA, install
+`causal-conv1d` and `flash-linear-attention` separately for their optimized
+kernels. On CPU and Apple Silicon those warnings are expected and the fallback
+remains correct, though slower.
+
+For a multimodal checkpoint, pass one or more image URLs, data URLs, or local paths:
+
+```python
+client = LocalClient(model="Qwen/Qwen3.5-0.8B")
+result = client.system_one(
+    state="Which kind of document is shown?",
+    images=["document.png"],
+    questions={"kind": Choice(criteria={"receipt": None, "invoice": None, "other": None})},
+)
+```
+
+Images are attached to every question. They require a vision-capable checkpoint
+and either the Hugging Face runtime or MLX on Apple silicon. For MLX, use
+`LocalClient(model="Qwen/Qwen3.5-0.8B", runtime="mlx", mode="sequence")` after
+installing the `mlx` extra. Vision checkpoints automatically load through MLX-VLM;
+text-only checkpoints use MLX-LM and reject image inputs.
+
+For text-only Qwen 3.5 inference on Apple Silicon, select an MLX-LM-compatible
+conversion such as `mlx-community/Qwen3.5-0.8B-OptiQ-4bit` and pass
+`runtime="mlx"`. Qwen 3.5 support requires MLX-LM 0.30.7 or newer, which is
+included by the current `mlx` extra. For Choice questions, use `mode="sequence"`
+with Qwen 3.5 when correctness matters: its compact `answer_codes` scores can
+have a strong first-position bias, particularly after quantization.
 
 | `LocalClient` argument | Default | Purpose |
 | --- | --- | --- |

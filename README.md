@@ -13,7 +13,8 @@ REST API, and LangChain integrations share one request contract:
 `answers`, and `usage`. Choice selects a category, Score evaluates a rubric,
 and Noul returns the relative probability of a yes/true answer.
 
-The default checkpoint is `Qwen/Qwen2.5-1.5B-Instruct`. Open Cricket is independent
+The default checkpoint is `Qwen/Qwen2.5-1.5B-Instruct`. Modern multimodal checkpoints,
+including `Qwen/Qwen3.5-0.8B`, are supported by the Hugging Face runtime. Open Cricket is independent
 of TypeSafe; its API follows Jev's general call shapes, but model predictions
 and confidence calibration differ.
 
@@ -65,13 +66,43 @@ State, instructions, and descriptions also accept structured JSON objects and ar
 See the [CLI examples guide](examples/README.md) for product-review, incident,
 multilingual, structured-state, and 40-candidate requests.
 
+### Image inputs
+
+Pass image URLs, data URLs, or local paths in the optional top-level `images` array.
+Images are supplied to every question together with `state`:
+
+```python
+from open_cricket import Choice, LocalClient
+
+client = LocalClient(model="Qwen/Qwen3.5-0.8B")
+result = client.system_one(
+    state="Classify the document in this image.",
+    images=["receipt.png"],
+    questions={"kind": Choice(criteria={"receipt": None, "invoice": None, "other": None})},
+)
+```
+
+Image input requires a vision-capable checkpoint and either the Hugging Face runtime
+or the MLX runtime on Apple silicon. MLX automatically uses MLX-VLM for vision
+checkpoints and MLX-LM for text-only checkpoints. Text-only models reject image requests.
+URLs are fetched
+by the model processor; only use trusted sources when running a server.
+
+Open Cricket explicitly renders reasoning-capable chat templates with
+`enable_thinking=False`. Its scorer evaluates the model's immediate next answer token, so
+a hidden reasoning preamble is incompatible with classification. For Qwen 3.5 this matches
+the checkpoint's default non-thinking mode.
+
 CLI output defaults to JSON. `--pretty` renders answers and probabilities;
 `--time` reports request time excluding model initialization. The file's `model`
 selects the checkpoint; `--model` overrides it explicitly. `--backend hf|mlx`,
 `--device`, `--revision`, `--mode`, and `--temperature` configure local inference.
 
 The first run downloads the selected model from Hugging Face. Remote model code
-is disabled. To explore the scoring mathematics with synthetic probabilities:
+is disabled. Later loads try the complete local Hugging Face cache first and do
+not contact the Hub unless a required file is missing. The `Loading weights`
+progress bar still appears while cached weights are read into memory; it is not
+a download. To explore the scoring mathematics with synthetic probabilities:
 
 ```bash
 uv run open-cricket --demo --pretty
@@ -207,10 +238,11 @@ uv run open-cricket --backend mlx --input examples/support.json --pretty --time
 ```
 
 MLX accepts compatible Hugging Face checkpoints and MLX-converted quantized
-checkpoints via `--model`. The selected checkpoint determines weight precision;
+checkpoints via `--model`. Qwen 3.5 requires MLX-LM 0.30.7 or newer and is
+supported through MLX-VLM for both text and image inputs. The
+selected checkpoint determines weight precision;
 quantization and lower precision can change probabilities and close rankings.
-The MLX extra is restricted to Apple silicon macOS and uses MLX-LM 0.28.x to
-remain compatible with this project's Transformers 4.x dependency. It requires
+The MLX extra includes MLX-LM and MLX-VLM and is restricted to Apple silicon macOS. It requires
 an accessible Metal GPU. Hugging Face remains the default runtime.
 
 In Python, use `from open_cricket.mlx import MLXBackend` and pass `MLXBackend()`
@@ -225,6 +257,13 @@ Keep the model loaded between requests (for example through the HTTP service).
 Starting the CLI for every message reloads the model. The existing runnable
 serializes access to its model; async requests do not provide GPU batching.
 Caches are isolated per classification and are not retained across requests.
+
+Qwen 3.5's Gated DeltaNet layers have optional CUDA kernels. On NVIDIA systems,
+install `causal-conv1d` and `flash-linear-attention` in the same environment to
+avoid the Transformers reference-kernel warnings and improve performance. Those
+packages are not portable dependencies, so Open Cricket does not install them in
+the general `hf` extra. On CPU and Apple Silicon, the warnings are expected: the
+PyTorch reference implementation is correct but slower.
 
 ### One-pass answer-code scoring
 

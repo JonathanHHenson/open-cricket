@@ -57,6 +57,14 @@ class SystemOneRequest(WireModel):
     state: Content
     model: str = Field(min_length=1)
     questions: dict[str, Question] = Field(min_length=1)
+    images: list[str] = Field(default_factory=list)
+
+    @field_validator("images")
+    @classmethod
+    def nonempty_images(cls, value):
+        if any(not source.strip() for source in value):
+            raise ValueError("Image sources must be nonempty strings")
+        return value
 
 
 Probability = Annotated[float, Field(ge=0, le=1)]
@@ -124,7 +132,7 @@ def confidence(probabilities):
     return min(1.0, max(0.0, 1.0 - entropy / math.log(len(values))))
 
 
-def classification_input(state, question):
+def classification_input(state, question, images=()):
     if isinstance(question, Choice):
         descriptions = question.criteria
         default = "Which category best describes the supplied state?"
@@ -135,9 +143,7 @@ def classification_input(state, question):
         criteria = question.criteria or NoulCriteria()
         descriptions = {
             "true": criteria.true if criteria.true is not None else "Yes",
-            "false": criteria.false
-            if criteria.false is not None
-            else "No",
+            "false": criteria.false if criteria.false is not None else "No",
         }
         default = (
             "Does the supplied state match the true criterion rather than the false criterion?"
@@ -150,11 +156,16 @@ def classification_input(state, question):
         else:
             options.append({"label": label, "description": render(description)})
     instructions = render(question.instructions) if question.instructions is not None else default
-    return {
+    value = {
         "message": render(state),
         "question": instructions if instructions.strip() else default,
         "options": options,
     }
+    if images:
+        value["images"] = list(images)
+    return value
+
+
 def format_response(request, model, results):
     answers = {}
     input_tokens = 0

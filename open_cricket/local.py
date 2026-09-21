@@ -1,7 +1,17 @@
 """Shared tokenization and request-local cache traversal for local runtimes."""
 
 import math
+from collections.abc import Mapping
 from typing import Any
+
+
+class ModelPrompt(tuple):
+    """Token IDs plus processor-created tensors needed for a multimodal prefill."""
+
+    def __new__(cls, ids, model_inputs=None):
+        value = super().__new__(cls, ids)
+        value.model_inputs = model_inputs or {}
+        return value
 
 
 class LocalBackend:
@@ -10,13 +20,20 @@ class LocalBackend:
     limit: int
     _last_logits: bool
 
-    def prompt_ids(self, system, form):
+    def prompt_ids(self, system, form, images=()):
+        if images:
+            raise ValueError("This backend does not support image inputs")
         if self.tokenizer.chat_template:
-            return self.tokenizer.apply_chat_template(
+            encoded = self.tokenizer.apply_chat_template(
                 [{"role": "system", "content": system}, {"role": "user", "content": form}],
                 tokenize=True,
                 add_generation_prompt=True,
+                # Classification scores the immediate next token, so a reasoning
+                # preamble would score <think> rather than an answer candidate.
+                enable_thinking=False,
             )
+            # Transformers 5 returns BatchEncoding by default; 4.x returned IDs directly.
+            return encoded["input_ids"] if isinstance(encoded, Mapping) else encoded
         return self.tokenizer.encode(system + "\n\n" + form + "\n", add_special_tokens=True)
 
     def answer_ids(self, answer):
@@ -45,7 +62,11 @@ class LocalBackend:
     def next_logprobs(self, prompt, prefix, allowed):
         ids = tuple(prompt) + tuple(prefix)
         self._validate(ids)
-        logits, _ = self._forward(ids, None, False)
+        model_inputs = getattr(prompt, "model_inputs", None)
+        if model_inputs:
+            logits, _ = self._forward(ids, None, False, model_inputs=model_inputs)
+        else:
+            logits, _ = self._forward(ids, None, False)
         return self._probabilities(logits, allowed)
 
     def _probabilities(self, logits, allowed):
@@ -56,13 +77,14 @@ class LocalBackend:
 
     def scorer(self, prompt):
         """Create an isolated scoring session; never retain another request's KV state."""
-        session = CachedScorer(self, tuple(prompt))
+        session = CachedScorer(self, prompt)
         return session if getattr(self, "_batch_chains", True) else session.__call__
 
 
 class CachedScorer:
     def __init__(self, backend, prompt):
-        self.backend, self.prompt = backend, prompt
+        self.backend, self.prompt = backend, tuple(prompt)
+        self.model_inputs = getattr(prompt, "model_inputs", None)
         self.cache = None
         self.previous = ()
 
@@ -91,13 +113,23 @@ class CachedScorer:
                 self.cache, common = None, 0
         try:
             if forward_many is not None and len(requests) > 1:
-                logits, self.cache = forward_many(ids[common:], self.cache, True, len(requests))
+                kwargs = (
+                    {"model_inputs": self.model_inputs} if common == 0 and self.model_inputs else {}
+                )
+                logits, self.cache = forward_many(
+                    ids[common:], self.cache, True, len(requests), **kwargs
+                )
             else:
-                last, self.cache = self.backend._forward(ids[common:], self.cache, True)
+                kwargs = (
+                    {"model_inputs": self.model_inputs} if common == 0 and self.model_inputs else {}
+                )
+                last, self.cache = self.backend._forward(ids[common:], self.cache, True, **kwargs)
                 logits = [last]
             self.previous = ids
-            return [self.backend._probabilities(row, allowed)
-                    for row, (_, allowed) in zip(logits, requests)]
+            return [
+                self.backend._probabilities(row, allowed)
+                for row, (_, allowed) in zip(logits, requests)
+            ]
         except Exception:
             self.cache, self.previous = None, ()
             raise

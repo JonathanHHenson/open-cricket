@@ -90,6 +90,8 @@ class IntegrationTests(unittest.TestCase):
     def test_missing_top_k_is_not_zero(self):
         with self.assertRaises(ProbabilityUnavailableError):
             chat_runnable(FakeChat(missing=True)).invoke(VALUE)
+        with self.assertRaisesRegex(ValueError, 'does not support image inputs'):
+            chat_runnable(FakeChat()).invoke({**VALUE, 'images': ['receipt.png']})
 
     @unittest.skipUnless(importlib.util.find_spec("langgraph"), "Install .[langgraph]")
     def test_real_langgraph_state_and_conditional_routing(self):

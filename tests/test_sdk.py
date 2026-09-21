@@ -28,6 +28,15 @@ class Tokens:
         return {token: -5.6 for token in allowed}
 
 
+class ImageTokens(Tokens):
+    def __init__(self):
+        self.images = []
+
+    def prompt_ids(self, system, form, images=()):
+        self.images.append(tuple(images))
+        return [99]
+
+
 class SdkTests(unittest.TestCase):
     def test_examples_share_cli_local_and_http_contract(self):
         for filename in (
@@ -76,6 +85,24 @@ class SdkTests(unittest.TestCase):
         self.assertIn('Yes probability:', pretty)
         with self.assertRaisesRegex(ValueError, 'Unknown model'):
             client.system_one('Test', questions, model='open_cricket')
+
+    def test_image_inputs_reach_every_question_and_remain_optional(self):
+        backend = ImageTokens()
+        client = LocalClient(model='Qwen/Qwen3.5-0.8B', backend=backend)
+        result = client.system_one(
+            'Classify the attached receipt.',
+            {'kind': Choice(criteria={'receipt': None, 'other': None}),
+             'legible': Noul(instructions='Is the text legible?')},
+            images=['receipt.png', 'data:image/png;base64,AA=='],
+        )
+        self.assertEqual(set(result['answers']), {'kind', 'legible'})
+        self.assertEqual(backend.images, [
+            ('receipt.png', 'data:image/png;base64,AA=='),
+            ('receipt.png', 'data:image/png;base64,AA=='),
+        ])
+
+        # Existing two-argument custom backends retain their text-only protocol.
+        LocalClient(backend=Tokens()).system_one('Text only', {'q': Noul()})
 
     def test_invalid_shape_rejected_across_clients_and_cli(self):
         payload = {'message': 'test', 'questions': [{'question': 'Which?', 'options': ['a']}]}

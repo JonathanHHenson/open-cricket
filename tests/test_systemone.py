@@ -22,7 +22,7 @@ class Classifier:
     async def ainvoke(self, value):
         from open_cricket.systemone import SystemOneRequest, classification_input, format_response
         request = SystemOneRequest.model_validate(value)
-        results = [await self.score(classification_input(request.state, question))
+        results = [await self.score(classification_input(request.state, question, request.images))
                    for question in request.questions.values()]
         return format_response(request, request.model, results).model_dump(mode="json")
 
@@ -107,6 +107,8 @@ class SystemOneTests(unittest.TestCase):
             {**payload(), 'questions': {'q': {'type': 'score', 'criteria': ['x'] * 11}}},
             {**payload(), 'questions': {'q': {'type': 'noul', 'criteria': {'yes': 'x'}}}},
             {**payload(), 'questions': {'q': {'type': 'noul', 'instructions': 9}}},
+            {**payload(), 'images': [3]},
+            {**payload(), 'images': [' ']},
             {key: value for key, value in payload().items() if key != 'model'},
         ]
         for body in cases:
@@ -116,6 +118,15 @@ class SystemOneTests(unittest.TestCase):
         self.assertEqual(self.classifier.calls, [])
         invalid_json = self.client.post('/v1/systemone', content='{', headers=self.headers)
         self.assertEqual(invalid_json.status_code, 422)
+
+    def test_images_are_forwarded_without_becoming_state_text(self):
+        body = {**payload(), 'images': ['https://example.test/receipt.png']}
+        response = self.post(body)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(
+            self.classifier.calls[0]['images'], ['https://example.test/receipt.png']
+        )
+        self.assertEqual(json.loads(self.classifier.calls[0]['message']), body['state'])
 
     def test_optional_instructions_and_noul_criteria(self):
         questions = {'a': {'type': 'choice', 'criteria': {'yes': None}},

@@ -24,8 +24,10 @@ ANSWER_CODES = string.ascii_uppercase + string.digits
 
 
 def _case_aliases(code):
-    choices = [(character, character.lower()) if character.isalpha() else (character,)
-               for character in code]
+    choices = [
+        (character, character.lower()) if character.isalpha() else (character,)
+        for character in code
+    ]
     return ("".join(characters) for characters in product(*choices))
 
 
@@ -57,7 +59,7 @@ def _answer_codes(backend, size):
         (selected if all(len(ids) == 2 for _, ids in item[1]) else deferred).append(item)
         if len(selected) == size:
             return selected
-    selected.extend(deferred[:size - len(selected)])
+    selected.extend(deferred[: size - len(selected)])
     if len(selected) == size:
         return selected
     for width in count(2):
@@ -111,8 +113,13 @@ def _build_form(message, question, categories, *, answer_codes=None):
     )
     if answer_codes:
         rendered = "\n".join(
-            f"{code}. " + json.dumps(label, ensure_ascii=False)
-            + (": " + json.dumps(description, ensure_ascii=False) if description is not None else "")
+            f"{code}. "
+            + json.dumps(label, ensure_ascii=False)
+            + (
+                ": " + json.dumps(description, ensure_ascii=False)
+                if description is not None
+                else ""
+            )
             for code, (label, description) in zip(answer_codes, categories)
         )
         return form + "\n\nChoose one category:\n" + rendered + "\n\nAnswer with its code:"
@@ -137,7 +144,7 @@ def build_form(message, question, options):
     return _build_form(message, question, normalize_options(options))
 
 
-def _prepare(backend, message, question, options, mode, temperature):
+def _prepare(backend, message, question, options, mode, temperature, images=()):
     categories = normalize_options(options)
     if mode not in {"sequence", "constrained", "answer_codes"}:
         raise ValueError("mode must be sequence, constrained, or answer_codes")
@@ -146,9 +153,7 @@ def _prepare(backend, message, question, options, mode, temperature):
     codes = {}
     if mode == "answer_codes":
         available = _answer_codes(backend, len(categories))
-        single_token = all(
-            len(ids) == 2 for _, aliases in available for _, ids in aliases
-        )
+        single_token = all(len(ids) == 2 for _, aliases in available for _, ids in aliases)
         paths = {}
         path_labels = {}
         path_aliases = {}
@@ -161,10 +166,15 @@ def _prepare(backend, message, question, options, mode, temperature):
                 path_aliases[key] = alias
     else:
         paths = {
-            label: backend.answer_ids(json.dumps(label, ensure_ascii=False)) for label, _ in categories
+            label: backend.answer_ids(json.dumps(label, ensure_ascii=False))
+            for label, _ in categories
         }
     form = _build_form(message, question, categories, answer_codes=tuple(codes.values()))
-    prompt = backend.prompt_ids(CODE_SYSTEM if codes else SYSTEM, form)
+    if images:
+        prompt = backend.prompt_ids(CODE_SYSTEM if codes else SYSTEM, form, images)
+    else:
+        # Preserve compatibility with custom text backends implementing the original protocol.
+        prompt = backend.prompt_ids(CODE_SYSTEM if codes else SYSTEM, form)
     return {
         "question": question,
         "form": form,
@@ -186,8 +196,10 @@ def _score_prepared(backend, prepared, root_logprobs=None):
     if root_logprobs is not None:
         callback = lambda prefix, allowed: root_logprobs
     else:
-        callback = scorer(prompt) if scorer is not None and not single_token else (
-            lambda prefix, allowed: backend.next_logprobs(prompt, prefix, allowed)
+        callback = (
+            scorer(prompt)
+            if scorer is not None and not single_token
+            else (lambda prefix, allowed: backend.next_logprobs(prompt, prefix, allowed))
         )
     result = score_paths(
         paths,
@@ -195,11 +207,13 @@ def _score_prepared(backend, prepared, root_logprobs=None):
         mode="sequence" if codes else prepared["mode"],
         temperature=1.0 if codes else prepared["temperature"],
     )
-    result.update({
-        "question": prepared["question"],
-        "form": prepared["form"],
-        "prompt_tokens": len(prompt),
-    })
+    result.update(
+        {
+            "question": prepared["question"],
+            "form": prepared["form"],
+            "prompt_tokens": len(prompt),
+        }
+    )
     if codes:
         grouped = {label: [] for label in codes}
         by_key = {row["label"]: row for row in result["options"]}
@@ -214,39 +228,43 @@ def _score_prepared(backend, prepared, root_logprobs=None):
         rows = []
         for label, aliases in grouped.items():
             alias, representative = max(aliases, key=lambda item: item[1]["log_likelihood"])
-            rows.append({
-                "label": label,
-                "probability": math.exp(scaled[label] - normalizer),
-                "log_likelihood": raw[label],
-                "score": raw[label],
-                "token_ids": representative["token_ids"],
-                "trace": representative["trace"],
-                "code": codes[label],
-                "matched_alias": alias,
-                "aliases": [
-                    {
-                        "code": candidate,
-                        "token_ids": row["token_ids"],
-                        "log_likelihood": row["log_likelihood"],
-                        "trace": row["trace"],
-                    }
-                    for candidate, row in aliases
-                ],
-            })
+            rows.append(
+                {
+                    "label": label,
+                    "probability": math.exp(scaled[label] - normalizer),
+                    "log_likelihood": raw[label],
+                    "score": raw[label],
+                    "token_ids": representative["token_ids"],
+                    "trace": representative["trace"],
+                    "code": codes[label],
+                    "matched_alias": alias,
+                    "aliases": [
+                        {
+                            "code": candidate,
+                            "token_ids": row["token_ids"],
+                            "log_likelihood": row["log_likelihood"],
+                            "trace": row["trace"],
+                        }
+                        for candidate, row in aliases
+                    ],
+                }
+            )
         rows.sort(key=lambda row: row["probability"], reverse=True)
-        result.update({
-            "answer": rows[0]["label"],
-            "options": rows,
-            "temperature": prepared["temperature"],
-            "candidate_log_mass": logsumexp(raw.values()),
-        })
+        result.update(
+            {
+                "answer": rows[0]["label"],
+                "options": rows,
+                "temperature": prepared["temperature"],
+                "candidate_log_mass": logsumexp(raw.values()),
+            }
+        )
         result["mode"] = "answer_codes"
         result["probability_note"] = (
             "Relative probabilities of case-insensitive first answer-code tokens; EOS is not "
             "scored. "
             "Code/order bias can change predictions; not calibrated confidence."
-            if single_token else
-            "Relative probabilities of complete case-insensitive answer codes including EOS. "
+            if single_token
+            else "Relative probabilities of complete case-insensitive answer codes including EOS. "
             "Code length/order bias can change predictions; not calibrated confidence."
         )
     return result
@@ -260,16 +278,16 @@ def classify(backend, message, question, options, *, mode="answer_codes", temper
 
 def classify_many(backend, values, *, mode="answer_codes", temperature=1.0):
     """Classify a request's questions together when the backend can batch codes."""
-    prepared = [
-        _prepare(backend, **value, mode=mode, temperature=temperature)
-        for value in values
-    ]
+    prepared = [_prepare(backend, **value, mode=mode, temperature=temperature) for value in values]
     batch = getattr(backend, "batch_next_logprobs", None)
-    if (mode == "answer_codes" and len(prepared) > 1 and batch is not None
-            and all(len(path) == 1 for item in prepared for path in item["paths"].values())):
+    if (
+        mode == "answer_codes"
+        and len(prepared) > 1
+        and batch is not None
+        and all(len(path) == 1 for item in prepared for path in item["paths"].values())
+    ):
         requests = [
-            (item["prompt"], tuple(path[0] for path in item["paths"].values()))
-            for item in prepared
+            (item["prompt"], tuple(path[0] for path in item["paths"].values())) for item in prepared
         ]
         probabilities = batch(requests)
         if len(probabilities) != len(prepared):

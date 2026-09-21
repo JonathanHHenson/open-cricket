@@ -24,18 +24,25 @@ memory limits still apply. For full label likelihoods, configure
 `OPEN_CRICKET_MODE=sequence` on the server (or `LocalClient(mode="sequence")`).
 The local wire schema has no maximum Choice label count.
 
-All three top-level fields are required:
+Three top-level fields are required; `images` is optional:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `state` | String, JSON object, or JSON array | Data to evaluate; no top-level number, boolean, or null |
 | `model` | Nonempty string | Exact configured checkpoint name from `/v1/models` |
 | `questions` | Nonempty object | User-chosen identifiers mapped to typed questions |
+| `images` | Array of strings | Optional image URLs, data URLs, or local paths supplied to every question |
 
 Objects and arrays may contain nested JSON values. Structured content is
 serialized into the prompt. Question identifiers become answer keys but are
 not included in model prompts. Each question sees the same state independently;
 earlier answers do not feed later questions.
+
+`images` requires a vision-capable checkpoint on the Hugging Face or MLX runtime, such as
+`Qwen/Qwen3.5-0.8B`. A backend that cannot process images returns an error rather
+than dropping them. The processor loads URL and path sources at inference time;
+server operators should only accept trusted sources or enforce their own URL and
+filesystem policy at the network boundary.
 
 Each question requires a `type`. `instructions` accepts a string, object, array,
 null, or omission. Omitted, null, or blank-string instructions use a generic
@@ -70,7 +77,8 @@ Save as `request.json`:
 ```json
 {
   "state": {"message": "I was charged twice. Please fix this today."},
-  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "model": "Qwen/Qwen3.5-0.8B",
+  "images": ["https://example.test/receipt.png"],
   "questions": {
     "team": {
       "type": "choice",
@@ -102,7 +110,7 @@ Illustrative response only; these values are not measured predictions:
 
 ```json
 {
-  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "model": "Qwen/Qwen3.5-0.8B",
   "answers": {
     "team": {
       "type": "choice",
