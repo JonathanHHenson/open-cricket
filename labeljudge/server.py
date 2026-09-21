@@ -6,10 +6,11 @@ Custom backend: create_app(any compatible classification Runnable).
 
 import hmac
 import os
-from uuid import uuid4
 from contextlib import asynccontextmanager
+from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request as HTTPRequest
+from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Request as HTTPRequest
 
 from .systemone import ModelsResponse, SystemOneRequest, SystemOneResponse
 
@@ -17,7 +18,8 @@ from .systemone import ModelsResponse, SystemOneRequest, SystemOneResponse
 def create_app(classifier=None, *, model_name=None):
     served_model = model_name or (
         os.getenv("LABELJUDGE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
-        if classifier is None else "labeljudge-custom"
+        if classifier is None
+        else "labeljudge-custom"
     )
 
     def authenticate(authorization: str | None = Header(default=None)):
@@ -33,9 +35,11 @@ def create_app(classifier=None, *, model_name=None):
             from .sdk import LocalClient
 
             app.state.classifier = LocalClient(
-                model=served_model, runtime=os.getenv("LABELJUDGE_BACKEND", "hf"),
+                model=served_model,
+                runtime=os.getenv("LABELJUDGE_BACKEND", "hf"),
                 device=os.getenv("LABELJUDGE_DEVICE", "auto"),
-                revision=os.getenv("LABELJUDGE_REVISION"))
+                revision=os.getenv("LABELJUDGE_REVISION"),
+            )
         else:
             app.state.classifier = classifier
         yield
@@ -52,15 +56,20 @@ def create_app(classifier=None, *, model_name=None):
 
     @app.get("/v1/models", response_model=ModelsResponse, dependencies=[Depends(authenticate)])
     def models():
-        return {"models": [
-            {"name": name,
-             "description": f"LabelJudge local inference using {served_model}; structured decision API.",
-             "release_date": "2026-09-21"}
-            for name in (served_model,)
-        ]}
+        return {
+            "models": [
+                {
+                    "name": name,
+                    "description": f"LabelJudge local inference using {served_model}; structured decision API.",
+                    "release_date": "2026-09-21",
+                }
+                for name in (served_model,)
+            ]
+        }
 
-    @app.post("/v1/systemone", response_model=SystemOneResponse,
-              dependencies=[Depends(authenticate)])
+    @app.post(
+        "/v1/systemone", response_model=SystemOneResponse, dependencies=[Depends(authenticate)]
+    )
     async def system_one(request: SystemOneRequest):
         if request.model != served_model:
             raise HTTPException(status_code=422, detail="Unknown model; see GET /v1/models")

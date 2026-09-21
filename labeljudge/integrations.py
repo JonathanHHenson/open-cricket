@@ -14,12 +14,21 @@ class ProbabilityUnavailableError(ValueError):
 def as_runnable(backend, *, model="Qwen/Qwen2.5-1.5B-Instruct", mode="sequence", temperature=1.0):
     """Runnable consuming state/model/questions and returning typed answers."""
     from langchain_core.runnables import RunnableLambda
+
     from .sdk import LocalClient
+
     client = LocalClient(model=model, backend=backend, mode=mode, temperature=temperature)
     return RunnableLambda(client.invoke, afunc=client.ainvoke, name="labeljudge_exact")
 
 
-def chat_runnable(model, *, model_name="Qwen/Qwen2.5-1.5B-Instruct", top_logprobs=20, temperature=1.0, bind_kwargs=None):
+def chat_runnable(
+    model,
+    *,
+    model_name="Qwen/Qwen2.5-1.5B-Instruct",
+    top_logprobs=20,
+    temperature=1.0,
+    bind_kwargs=None,
+):
     """Single-token answer-code path for compatible LangChain chat models.
 
     Each label is mapped to A..Z. Requires original first-token probabilities
@@ -131,14 +140,18 @@ def chat_runnable(model, *, model_name="Qwen/Qwen2.5-1.5B-Instruct", top_logprob
 
     def system_run(value, config: RunnableConfig):
         request = request_for(value)
-        results = [raw.invoke(classification_input(request.state, question), config=config)
-                   for question in request.questions.values()]
+        results = [
+            raw.invoke(classification_input(request.state, question), config=config)
+            for question in request.questions.values()
+        ]
         return format_response(request, model_name, results).model_dump(mode="json")
 
     async def system_arun(value, config: RunnableConfig):
         request = request_for(value)
-        results = [await raw.ainvoke(classification_input(request.state, question), config=config)
-                   for question in request.questions.values()]
+        results = [
+            await raw.ainvoke(classification_input(request.state, question), config=config)
+            for question in request.questions.values()
+        ]
         return format_response(request, model_name, results).model_dump(mode="json")
 
     return RunnableLambda(system_run, afunc=system_arun, name="labeljudge_chat")
@@ -153,9 +166,17 @@ def graph_node(runnable, *, output_key="classification"):
     from langchain_core.runnables import RunnableConfig, RunnableLambda
 
     def run(state, config: RunnableConfig):
-        return {output_key: runnable.invoke({key: state[key] for key in ("state", "model", "questions")}, config=config)}
+        return {
+            output_key: runnable.invoke(
+                {key: state[key] for key in ("state", "model", "questions")}, config=config
+            )
+        }
 
     async def arun(state, config: RunnableConfig):
-        return {output_key: await runnable.ainvoke({key: state[key] for key in ("state", "model", "questions")}, config=config)}
+        return {
+            output_key: await runnable.ainvoke(
+                {key: state[key] for key in ("state", "model", "questions")}, config=config
+            )
+        }
 
     return RunnableLambda(run, afunc=arun, name="labeljudge_graph_node")

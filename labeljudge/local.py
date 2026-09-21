@@ -1,13 +1,22 @@
 """Shared tokenization and request-local cache traversal for local runtimes."""
+
 import math
+from typing import Any
 
 
 class LocalBackend:
+    tokenizer: Any
+    eos: int
+    limit: int
+    _last_logits: bool
+
     def prompt_ids(self, system, form):
         if self.tokenizer.chat_template:
             return self.tokenizer.apply_chat_template(
                 [{"role": "system", "content": system}, {"role": "user", "content": form}],
-                tokenize=True, add_generation_prompt=True)
+                tokenize=True,
+                add_generation_prompt=True,
+            )
         return self.tokenizer.encode(system + "\n\n" + form + "\n", add_special_tokens=True)
 
     def answer_ids(self, answer):
@@ -23,6 +32,15 @@ class LocalBackend:
             raise ValueError("Prompt must contain at least one token")
         if len(ids) > self.limit:
             raise ValueError(f"Input exceeds context limit ({self.limit}); no silent truncation")
+
+    def _forward(self, ids, cache, use_cache):
+        raise NotImplementedError
+
+    def _trim(self, cache, length):
+        raise NotImplementedError
+
+    def _select(self, logits, allowed):
+        raise NotImplementedError
 
     def next_logprobs(self, prompt, prefix, allowed):
         ids = tuple(prompt) + tuple(prefix)

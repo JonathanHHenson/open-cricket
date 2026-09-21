@@ -1,4 +1,6 @@
 """Local Hugging Face causal-LM adapter; no top-k truncation or text generation."""
+
+import importlib
 import inspect
 
 from .local import LocalBackend
@@ -6,22 +8,34 @@ from .local import LocalBackend
 
 class HuggingFaceBackend(LocalBackend):
     def __init__(self, model="Qwen/Qwen2.5-1.5B-Instruct", device="auto", revision=None):
-        import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        torch = importlib.import_module("torch")
+        transformers = importlib.import_module("transformers")
         self.torch = torch
         if device == "auto":
-            device = "cuda" if torch.cuda.is_available() else (
-                "mps" if torch.backends.mps.is_available() else "cpu")
+            device = (
+                "cuda"
+                if torch.cuda.is_available()
+                else ("mps" if torch.backends.mps.is_available() else "cpu")
+            )
         self.device = device
-        self.tokenizer = AutoTokenizer.from_pretrained(model, revision=revision, trust_remote_code=False)
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model, revision=revision, trust_remote_code=False).to(device).eval()
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            model, revision=revision, trust_remote_code=False
+        )
+        self.model = (
+            transformers.AutoModelForCausalLM.from_pretrained(
+                model, revision=revision, trust_remote_code=False
+            )
+            .to(device)
+            .eval()
+        )
         self._last_logits = "logits_to_keep" in inspect.signature(self.model.forward).parameters
         self.eos = self.tokenizer.eos_token_id
         if self.eos is None:
             raise ValueError("Model tokenizer must define an EOS/end-of-turn token")
-        limits = [getattr(self.model.config, "max_position_embeddings", None),
-                  self.tokenizer.model_max_length]
+        limits = [
+            getattr(self.model.config, "max_position_embeddings", None),
+            self.tokenizer.model_max_length,
+        ]
         self.limit = min(x for x in limits if isinstance(x, int) and x > 0)
 
     def _forward(self, ids, cache, use_cache):
@@ -31,13 +45,19 @@ class HuggingFaceBackend(LocalBackend):
         with self.torch.inference_mode():
             output = self.model(
                 input_ids=tensor,
-                attention_mask=self.torch.ones((1, length), dtype=self.torch.long, device=self.device),
-                past_key_values=cache, use_cache=use_cache, **kwargs)
+                attention_mask=self.torch.ones(
+                    (1, length), dtype=self.torch.long, device=self.device
+                ),
+                past_key_values=cache,
+                use_cache=use_cache,
+                **kwargs,
+            )
             return output.logits[0, -1].float(), output.past_key_values
 
     def _trim(self, cache, length):
         # Sliding-window/recurrent caches cannot safely restore arbitrary branches.
         from transformers.cache_utils import DynamicCache
+
         if not isinstance(cache, DynamicCache):
             return False
         layers = getattr(cache, "layers", None)

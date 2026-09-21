@@ -79,8 +79,14 @@ def main():
         probabilities = {row["label"]: row["probability"] for row in result["options"]}
         result = {
             "model": "synthetic-demo",
-            "answers": {"demo": {"type": "choice", "choice": result["answer"],
-                "probabilities": probabilities, "confidence": confidence(probabilities)}},
+            "answers": {
+                "demo": {
+                    "type": "choice",
+                    "choice": result["answer"],
+                    "probabilities": probabilities,
+                    "confidence": confidence(probabilities),
+                }
+            },
             "usage": {"input_tokens": 0, "output_tokens": 0},
         }
         result["demo_note"] = (
@@ -92,6 +98,7 @@ def main():
         with open(args.input, encoding="utf-8") as f:
             payload = json.load(f)
         from pydantic import ValidationError
+
         from .sdk import LocalClient
 
         try:
@@ -101,8 +108,14 @@ def main():
         if args.model:
             request.model = args.model
         input_message, questions = request.state, request.questions
-        client = LocalClient(model=request.model, runtime=args.backend, device=args.device,
-                             revision=args.revision, mode=args.mode, temperature=args.temperature)
+        client = LocalClient(
+            model=request.model,
+            runtime=args.backend,
+            device=args.device,
+            revision=args.revision,
+            mode=args.mode,
+            temperature=args.temperature,
+        )
         if args.time:
             request_started_at = perf_counter()
         result = client.invoke(request.model_dump(mode="json"))

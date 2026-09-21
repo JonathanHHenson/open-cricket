@@ -1,4 +1,5 @@
 """Optional MLX-LM adapter for Apple silicon, including converted quantized models."""
+
 from .local import LocalBackend
 
 
@@ -8,10 +9,16 @@ class MLXBackend(LocalBackend):
             raise ValueError("MLX backend requires device auto or mps")
         import mlx.core as mx
         from mlx_lm import load
+
         self.mx = mx
-        self.model, self.tokenizer, config = load(
-            model, revision=revision, return_config=True,
-            tokenizer_config={"trust_remote_code": False})
+        loaded = load(
+            model,
+            revision=revision,
+            return_config=True,
+            tokenizer_config={"trust_remote_code": False},
+        )
+        self.model, self.tokenizer = loaded[:2]
+        config = loaded[2] if len(loaded) == 3 else {}
         self.eos = self.tokenizer.eos_token_id
         if self.eos is None:
             raise ValueError("Model tokenizer must define an EOS/end-of-turn token")
@@ -20,6 +27,7 @@ class MLXBackend(LocalBackend):
 
     def _forward(self, ids, cache, use_cache):
         from mlx_lm.models.cache import make_prompt_cache
+
         if cache is None and use_cache:
             cache = make_prompt_cache(self.model)
         logits = self.model(self.mx.array([ids]), cache=cache)[0, -1].astype(self.mx.float32)
@@ -27,6 +35,7 @@ class MLXBackend(LocalBackend):
 
     def _trim(self, cache, length):
         from mlx_lm.models.cache import KVCache
+
         # Restrict rollback to ordinary KV caches: recurrent/windowed states
         # may have discarded history even if their API advertises trimming.
         if not cache or any(type(layer) is not KVCache for layer in cache):

@@ -1,6 +1,6 @@
+from .client import Client
 from .core import score_paths
 from .sdk import LocalClient
-from .client import Client
-from .systemone import Choice, Score, Noul
+from .systemone import Choice, Noul, Score
 
-__all__ = ["score_paths", "LocalClient", "Client", "Choice", "Score", "Noul"]
+__all__ = ["Choice", "Client", "LocalClient", "Noul", "Score", "score_paths"]

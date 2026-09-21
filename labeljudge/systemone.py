@@ -2,6 +2,7 @@
 
 This matches the public question/answer shapes, not Jev's model calibration.
 """
+
 import json
 import math
 from typing import Annotated, Literal
@@ -106,7 +107,9 @@ class ModelsResponse(WireModel):
 
 
 def render(value):
-    return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, allow_nan=False)
+    return (
+        value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, allow_nan=False)
+    )
 
 
 def confidence(probabilities):
@@ -132,9 +135,13 @@ def classification_input(state, question):
         criteria = question.criteria or NoulCriteria()
         descriptions = {
             "true": criteria.true if criteria.true is not None else "Yes, the statement is true.",
-            "false": criteria.false if criteria.false is not None else "No, the statement is false.",
+            "false": criteria.false
+            if criteria.false is not None
+            else "No, the statement is false.",
         }
-        default = "Does the supplied state match the true criterion rather than the false criterion?"
+        default = (
+            "Does the supplied state match the true criterion rather than the false criterion?"
+        )
     options = []
     for label, description in descriptions.items():
         # Empty descriptions carry no information; keep a valid canonical label.
@@ -143,8 +150,11 @@ def classification_input(state, question):
         else:
             options.append({"label": label, "description": render(description)})
     instructions = render(question.instructions) if question.instructions is not None else default
-    return {"message": render(state), "question": instructions if instructions.strip() else default,
-            "options": options}
+    return {
+        "message": render(state),
+        "question": instructions if instructions.strip() else default,
+        "options": options,
+    }
 
 
 def format_response(request, model, results):
@@ -153,26 +163,37 @@ def format_response(request, model, results):
     for (name, question), result in zip(request.questions.items(), results, strict=True):
         value = classification_input(request.state, question)
         probabilities = {row["label"]: row["probability"] for row in result["options"]}
-        labels = [option if isinstance(option, str) else option["label"] for option in value["options"]]
-        if (set(probabilities) != set(labels)
-                or any(not math.isfinite(p) or not 0 <= p <= 1 for p in probabilities.values())
-                or not math.isclose(sum(probabilities.values()), 1.0, abs_tol=1e-6)):
+        labels = [
+            option if isinstance(option, str) else option["label"] for option in value["options"]
+        ]
+        if (
+            set(probabilities) != set(labels)
+            or any(not math.isfinite(p) or not 0 <= p <= 1 for p in probabilities.values())
+            or not math.isclose(sum(probabilities.values()), 1.0, abs_tol=1e-6)
+        ):
             raise ValueError("Classifier must return a normalized probability for every criterion")
         probabilities = {label: probabilities[label] for label in labels}
         count = result.get("prompt_tokens")
-        input_tokens = input_tokens + count if input_tokens is not None and count is not None else None
+        input_tokens = (
+            input_tokens + count if input_tokens is not None and count is not None else None
+        )
         if isinstance(question, Noul):
             answers[name] = NoulAnswer(noul=probabilities["true"])
         elif isinstance(question, Score):
             answers[name] = ScoreAnswer(
                 score=sum(int(level) * p for level, p in probabilities.items()),
-                probabilities=probabilities, confidence=confidence(probabilities),
-                legend={str(i): description for i, description in enumerate(question.criteria)})
+                probabilities=probabilities,
+                confidence=confidence(probabilities),
+                legend={str(i): description for i, description in enumerate(question.criteria)},
+            )
         else:
             answers[name] = ChoiceAnswer(
-                choice=max(probabilities, key=probabilities.get), probabilities=probabilities,
-                confidence=confidence(probabilities))
+                choice=max(probabilities, key=lambda label: probabilities[label]),
+                probabilities=probabilities,
+                confidence=confidence(probabilities),
+            )
     # Scoring does not generate an output token sequence. Input usage counts
     # each question's full prompt once, not repeated cache/branch evaluations.
-    return SystemOneResponse(model=model, answers=answers,
-                             usage=Usage(input_tokens=input_tokens, output_tokens=0))
+    return SystemOneResponse(
+        model=model, answers=answers, usage=Usage(input_tokens=input_tokens, output_tokens=0)
+    )
