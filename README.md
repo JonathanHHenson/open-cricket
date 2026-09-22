@@ -3,9 +3,9 @@
 [![Test, build, and publish](https://github.com/JonathanHHenson/open-cricket/actions/workflows/publish.yml/badge.svg?branch=main)](https://github.com/JonathanHHenson/open-cricket/actions/workflows/publish.yml)
 [![PyPI version](https://img.shields.io/pypi/v/open-cricket.svg)](https://pypi.org/project/open-cricket/)
 [![Python versions](https://img.shields.io/pypi/pyversions/open-cricket.svg)](https://pypi.org/project/open-cricket/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JonathanHHenson/open-cricket/blob/main/LICENSE)
 
-![Open Cricket mascot](docs/assets/open-cricket-icon.svg)
+![Open Cricket mascot](https://raw.githubusercontent.com/JonathanHHenson/open-cricket/main/docs/assets/open-cricket-icon.svg)
 
 Ask a local language model structured questions. Open Cricket can run in your
 Python process or behind a small HTTP server. Both interfaces use the same
@@ -165,13 +165,13 @@ decision thresholds on your own data before automating decisions.
 
 ## Documentation
 
-- [Python SDK guide](docs/sdk.md) — local, async, and HTTP SDK details
-- [Server guide](docs/server.md) — configuration, operation, and troubleshooting
-- [API reference](docs/api.md) — request and response schemas
-- [CLI examples](examples/README.md) — more ready-to-run request files
-- [Technical documentation](docs/technical/README.md) — architecture, scoring,
+- [Python SDK guide](https://github.com/JonathanHHenson/open-cricket/blob/main/docs/sdk.md) — local, async, and HTTP SDK details
+- [Server guide](https://github.com/JonathanHHenson/open-cricket/blob/main/docs/server.md) — configuration, operation, and troubleshooting
+- [API reference](https://github.com/JonathanHHenson/open-cricket/blob/main/docs/api.md) — request and response schemas
+- [CLI examples](https://github.com/JonathanHHenson/open-cricket/blob/main/examples/README.md) — more ready-to-run request files
+- [Technical documentation](https://github.com/JonathanHHenson/open-cricket/blob/main/docs/technical/README.md) — architecture, scoring,
   backend development, and contributor checks
-- [Migration from Jev](docs/jev-migration.md) — adapting an existing TypeSafe/Jev
+- [Migration from Jev](https://github.com/JonathanHHenson/open-cricket/blob/main/docs/jev-migration.md) — adapting an existing TypeSafe/Jev
   integration
 
 Open Cricket is an independent educational prototype with no affiliation with

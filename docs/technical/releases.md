@@ -4,6 +4,7 @@
 
 ## Release notes
 
+- [v0.4.1: faster MLX image scoring and Qwen prompt fix](../releases/v0.4.1.md)
 - [v0.4.0: image inputs and vision-language models](../releases/v0.4.0.md)
 - [v0.3.1: clearer Noul prompts and more CLI examples](../releases/v0.3.1.md)
 - [v0.3.0: extensible case-insensitive codes and question batching](../releases/v0.3.0.md)

@@ -6,8 +6,9 @@ and Noul returns the relative probability of a yes/true answer.
 
 ## User guides
 
-Read the [v0.4.0 release notes](releases/v0.4.0.md) for image inputs and modern
-vision-language model support. The [v0.3.1 notes](releases/v0.3.1.md) cover
+Read the [v0.4.1 release notes](releases/v0.4.1.md) for faster MLX image scoring
+and the Qwen prompt fix. The [v0.4.0 notes](releases/v0.4.0.md) cover image inputs
+and vision-language model support. The [v0.3.1 notes](releases/v0.3.1.md) cover
 clearer Noul prompts and expanded CLI examples; the [v0.3.0 notes](releases/v0.3.0.md)
 cover answer codes and multi-question performance.
 
